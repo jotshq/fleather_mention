@@ -1,7 +1,9 @@
 import 'dart:async';
 
 import 'package:fleather/fleather.dart';
+import 'package:fleather_mention/fleather_mention.dart';
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 
 import 'options.dart';
 
@@ -122,19 +124,22 @@ class _MentionSuggestionList extends StatelessWidget {
     );
   }
 
-  Widget _buildOverlayWidget(BuildContext context) => Card(
-        child: SingleChildScrollView(
-          child: IntrinsicWidth(
-            child: Column(
-              mainAxisSize: MainAxisSize.min,
-              crossAxisAlignment: CrossAxisAlignment.stretch,
-              children: suggestions
-                  .map((e) => _buildListItem(context, e, query))
-                  .toList(),
-            ),
+  Widget _buildOverlayWidget(BuildContext context) {
+    final c = Card(
+      child: SingleChildScrollView(
+        child: IntrinsicWidth(
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            crossAxisAlignment: CrossAxisAlignment.stretch,
+            children: suggestions
+                .map((e) => _buildListItem(context, e, query))
+                .toList(),
           ),
         ),
-      );
+      ),
+    );
+    return c;
+  }
 
   Widget _buildListItem(BuildContext context, MentionData data, String text) =>
       InkWell(

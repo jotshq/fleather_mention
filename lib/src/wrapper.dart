@@ -1,9 +1,69 @@
 import 'package:fleather/fleather.dart';
+import 'package:flutter/services.dart';
 import 'package:flutter/widgets.dart';
 
 import 'options.dart';
 import 'overlay.dart';
 import 'utils.dart';
+
+class DirectionalFocusIntent2 extends Intent {
+  /// Creates an intent used to move the focus in the given [direction].
+  const DirectionalFocusIntent2(this.direction, {this.ignoreTextFields = true})
+      : assert(ignoreTextFields != null);
+
+  /// The direction in which to look for the next focusable node when the
+  /// associated [DirectionalFocusAction] is invoked.
+  final TraversalDirection direction;
+
+  /// If true, then directional focus actions that occur within a text field
+  /// will not happen when the focus node which received the key is a text
+  /// field.
+  ///
+  /// Defaults to true.
+  final bool ignoreTextFields;
+}
+
+class DecrementAction extends Action<DirectionalFocusIntent2> {
+  final _FleatherMentionState mo;
+
+  DecrementAction(this.mo);
+
+  @override
+  void invoke(covariant DirectionalFocusIntent2 intent) {
+    print("invoke dec");
+    // if (mo._mentionOverlay) {
+    //   return;
+    // }
+    // return Actions.invoke(
+    //     context,
+    //     DirectionalFocusIntent(
+    //         state.textEditingValue,
+    //         '',
+    //         _expandNonCollapsedRange(textBoundary.textEditingValue),
+    //         SelectionChangedCause.keyboard),
+    //   );
+  }
+
+  @override
+  bool get isActionEnabled {
+    if (mo._mentionOverlay != null) {
+      return true;
+    }
+    return false;
+    // print("is enable?");
+    // return super.isActionEnabled;
+  }
+
+  @override
+  bool consumesKey(DirectionalFocusIntent2 intent) {
+    if (mo._mentionOverlay != null) {
+      print("consume? YES");
+      return true;
+    }
+    print("consume? NO");
+    return false;
+  }
+}
 
 class FleatherMention extends StatefulWidget {
   final Widget child;
@@ -156,7 +216,7 @@ class _FleatherMentionState extends State<FleatherMention> {
     final controller = widget.controller;
     final mentionStartIndex = controller.selection.end - _lastQuery!.length - 1;
     final mentionedTextLength = _lastQuery!.length + 1;
-
+    print("ICI");
     controller.replaceText(
       mentionStartIndex,
       mentionedTextLength,
@@ -172,6 +232,21 @@ class _FleatherMentionState extends State<FleatherMention> {
           _updateOverlayForScroll();
           return false;
         },
-        child: widget.child,
+        child: Shortcuts(
+            key: GlobalKey(),
+            shortcuts: <ShortcutActivator, Intent>{
+              LogicalKeySet(LogicalKeyboardKey.arrowDown):
+                  const DirectionalFocusIntent2(TraversalDirection.down),
+              LogicalKeySet(LogicalKeyboardKey.arrowUp):
+                  const DirectionalFocusIntent2(TraversalDirection.up),
+              // LogicalKeySet(LogicalKeyboardKey.arrowUp): const IncrementIntent(),
+              // LogicalKeySet(LogicalKeyboardKey.arrowDown): const DecrementIntent(),
+            },
+            child: Actions(
+                actions: <Type, Action<Intent>>{
+                  DirectionalFocusIntent2: DecrementAction(this),
+                },
+                child: //Focus(autofocus: true, child: Text('count: '))
+                    Focus(autofocus: true, child: widget.child))),
       );
 }
