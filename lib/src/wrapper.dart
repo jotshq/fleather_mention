@@ -26,17 +26,6 @@ class MentionDirectionalFocusAction
     if (intent.direction == TraversalDirection.down) {
       mo._updateHighlight(1);
     }
-    // if (mo._mentionOverlay) {
-    //   return;
-    // }
-    // return Actions.invoke(
-    //     context,
-    //     DirectionalFocusIntent(
-    //         state.textEditingValue,
-    //         '',
-    //         _expandNonCollapsedRange(textBoundary.textEditingValue),
-    //         SelectionChangedCause.keyboard),
-    //   );
   }
 
   @override
@@ -45,8 +34,6 @@ class MentionDirectionalFocusAction
       return true;
     }
     return false;
-    // print("is enable?");
-    // return super.isActionEnabled;
   }
 
   @override
@@ -204,6 +191,7 @@ class _FleatherMentionState extends State<FleatherMention> {
         context: context,
         debugRequiredFor: widget.editorKey.currentWidget!,
         itemBuilder: _options.itemBuilder,
+        builder: _options.builder,
         suggestionSelected: _handleMentionSuggestionSelected,
         suggestions:
             _options.suggestionsBuilder.call(_lastTrigger!, _lastQuery!),
@@ -250,6 +238,7 @@ class _FleatherMentionState extends State<FleatherMention> {
                 actions: <Type, Action<Intent>>{
                   MentionDirectionalFocusIntent:
                       MentionDirectionalFocusAction(this),
+                      // DismissIntent
                 },
                 child: //Focus(autofocus: true, child: Text('count: '))
                     Focus(autofocus: true, child: widget.child))),

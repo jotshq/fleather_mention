@@ -1,4 +1,5 @@
 import 'dart:async';
+import 'dart:math';
 
 import 'package:fleather/fleather.dart';
 import 'package:fleather_mention/fleather_mention.dart';
@@ -16,6 +17,8 @@ class MentionOverlay {
   final TextEditingValue textEditingValue;
   final Function(MentionData)? suggestionSelected;
   final MentionSuggestionItemBuilder itemBuilder;
+  final MentionBuilder builder;
+
   OverlayEntry? overlayEntry;
   int? selected;
   final ValueNotifier<int> highlightedOptionIndex;
@@ -28,6 +31,7 @@ class MentionOverlay {
     required this.debugRequiredFor,
     required this.suggestions,
     required this.itemBuilder,
+    required this.builder,
     required this.query,
     required this.trigger,
     this.suggestionSelected,
@@ -48,6 +52,7 @@ class MentionOverlay {
                   textEditingValue: textEditingValue,
                   suggestionSelected: suggestionSelected,
                   itemBuilder: itemBuilder,
+                  builder: builder,
                   query: query,
                   trigger: trigger,
                 );
@@ -73,7 +78,8 @@ class MentionOverlay {
   }
 }
 
-const double listMaxHeight = 200;
+const double listMaxHeight = 240;
+const double listMaxWidth = 400;
 
 class _MentionSuggestionList extends StatelessWidget {
   final RenderEditor renderObject;
@@ -82,6 +88,7 @@ class _MentionSuggestionList extends StatelessWidget {
   final TextEditingValue textEditingValue;
   final Function(MentionData)? suggestionSelected;
   final MentionSuggestionItemBuilder itemBuilder;
+  final MentionBuilder builder;
 
   const _MentionSuggestionList({
     Key? key,
@@ -89,6 +96,7 @@ class _MentionSuggestionList extends StatelessWidget {
     required this.suggestions,
     required this.textEditingValue,
     required this.itemBuilder,
+    required this.builder,
     required this.query,
     required this.trigger,
     this.suggestionSelected,
@@ -104,9 +112,10 @@ class _MentionSuggestionList extends StatelessWidget {
     );
     final baseLineHeight =
         renderObject.preferredLineHeight(textEditingValue.selection.base);
-    final listMaxWidth = editingRegion.width / 2;
+    //final listMaxWidth = editingRegion.width / 2;
     final mediaQueryData = MediaQuery.of(context);
     final screenHeight = mediaQueryData.size.height;
+    final screenWidth = mediaQueryData.size.width;
 
     double? positionFromTop = endpoints[0].point.dy + editingRegion.top;
     double? positionFromBottom;
@@ -117,24 +126,53 @@ class _MentionSuggestionList extends StatelessWidget {
       positionFromBottom = screenHeight - editingRegion.bottom + baseLineHeight;
     }
 
+    double? positionFromLeft = endpoints[0].point.dx + editingRegion.left;
+    double? positionFromRight;
+    print("Pos left1: ${positionFromLeft}");
+    positionFromLeft = min(positionFromLeft, screenWidth - 32 - listMaxWidth);
+    print("Pos left2: ${positionFromLeft} ${screenWidth - 42 - listMaxWidth}");
+    if (positionFromLeft < 16) positionFromLeft = 16;
+    print("Pos left3: ${positionFromLeft}");
+
+    positionFromRight = (screenWidth - 16) - positionFromLeft - listMaxWidth;
+    print("Pos right: ${positionFromRight}");
+    if (positionFromRight < 16) {
+      positionFromRight = 16;
+      // if (positionFromLeft > 16) {
+      //   positionFromLeft
+      // }
+    }
+    // print(
+    //     "POS LL ${positionFromLeft} ${positionFromRight} ${screenWidth - 16}");
+
+    // if (positionFromLeft + listMaxWidth > screenWidth - 16) {
+    //   print("POS LOL ${positionFromLeft + listMaxWidth} ${screenWidth - 16}");
+    //   positionFromRight = 16;
+    // }
+
     return Positioned(
       top: positionFromTop,
       bottom: positionFromBottom,
-      right: 16,
-      left: 16,
+      left: positionFromLeft,
+      right: positionFromRight,
       child: ConstrainedBox(
-        constraints:
-            BoxConstraints(maxWidth: listMaxWidth, maxHeight: listMaxHeight),
+        constraints: const BoxConstraints(
+            maxWidth: listMaxWidth, maxHeight: listMaxHeight),
         child: _buildOverlayWidget(context),
       ),
     );
   }
 
   Widget _buildOverlayWidget(BuildContext context) {
+    return builder(context, trigger, query, suggestionSelected!);
+  }
+
+  Widget _defaultBuilder(BuildContext context, String trigger, String query) {
+    final children = <Widget>[];
     final sel = AutocompleteHighlightedOption.of(context) % suggestions.length;
     print("SEL: ${sel}");
     int i = 0;
-    final children = <Widget>[];
+
     for (var s in suggestions) {
       children.add(_buildListItem(context, s, query, sel == i));
       i++;

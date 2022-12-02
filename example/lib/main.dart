@@ -59,6 +59,50 @@ class _MyHomePageState extends State<MyHomePage> {
   final editorKey = GlobalKey<EditorState>();
   final options = MentionOptions(
     mentionTriggers: ['#', '@'],
+    builder: (context, trigger, query, onTap) {
+      final List<String> data;
+      if (trigger == '#') {
+        data = ['Android', 'iOS', 'Windows', 'macOs', 'Web', 'Linux'];
+      } else {
+        data = ['Hibato', 'Madina', 'Quentin', 'Cedric', 'Emilia', 'Cathy'];
+      }
+      final suggestions = data
+          .where((e) => e.toLowerCase().contains(query.toLowerCase()))
+          .map((e) => MentionData(value: e, trigger: trigger))
+          .toList();
+
+      final sel = AutocompleteHighlightedOption.of(context) %
+          (suggestions.length > 0 ? suggestions.length : 1);
+      int i = 0;
+      final children = <Widget>[];
+      for (var s in suggestions) {
+        children.add(ListTile(
+          onTap: () => onTap(s),
+          title: Text(s.value),
+          selected: i == sel,
+        ));
+
+        i++;
+      }
+
+      final c = Container(
+        color: Colors.amber,
+        child: Material(
+          type: MaterialType.transparency,
+          child: SingleChildScrollView(
+            child: SizedBox(
+              width: 200,
+              child: Column(
+                mainAxisSize: MainAxisSize.min,
+                crossAxisAlignment: CrossAxisAlignment.stretch,
+                children: children,
+              ),
+            ),
+          ),
+        ),
+      );
+      return c;
+    },
     suggestionsBuilder: (trigger, query) {
       final List<String> data;
       if (trigger == '#') {

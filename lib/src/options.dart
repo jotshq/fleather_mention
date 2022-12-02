@@ -8,15 +8,20 @@ typedef MentionSuggestionsBuilder = FutureOr<Iterable<MentionData>> Function(
 typedef MentionSuggestionItemBuilder = Widget Function(BuildContext context,
     MentionData data, String query, bool selected, void Function() onTap);
 
+typedef MentionBuilder = Widget Function(BuildContext context, String trigger,
+    String query, void Function(MentionData data) onTap);
+
 class MentionOptions {
   final Iterable<String> mentionTriggers;
   final MentionSuggestionsBuilder suggestionsBuilder;
   final MentionSuggestionItemBuilder itemBuilder;
+  final MentionBuilder builder;
 
   MentionOptions({
     required this.mentionTriggers,
     required this.suggestionsBuilder,
     required this.itemBuilder,
+    required this.builder,
   }) : assert(mentionTriggers.isNotEmpty);
 }
 
