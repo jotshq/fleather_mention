@@ -11,22 +11,14 @@ class MentionDirectionalFocusIntent extends Intent {
   final TraversalDirection direction;
 }
 
-class MentionDirectionalFocusAction
-    extends Action<MentionDirectionalFocusIntent> {
+class MentionSelectIntent extends Intent {
+  const MentionSelectIntent();
+}
+
+abstract class MentionAction<T extends Intent> extends Action<T> {
   final _FleatherMentionState mo;
 
-  MentionDirectionalFocusAction(this.mo);
-
-  @override
-  void invoke(covariant MentionDirectionalFocusIntent intent) {
-    print("invoke dec");
-    if (intent.direction == TraversalDirection.up) {
-      mo._updateHighlight(-1);
-    }
-    if (intent.direction == TraversalDirection.down) {
-      mo._updateHighlight(1);
-    }
-  }
+  MentionAction(this.mo);
 
   @override
   bool get isActionEnabled {
@@ -37,13 +29,39 @@ class MentionDirectionalFocusAction
   }
 
   @override
-  bool consumesKey(MentionDirectionalFocusIntent intent) {
-    if (mo._mentionOverlay != null) {
-      print("consume? YES");
-      return true;
+  bool consumesKey(T intent) {
+    // if (mo._mentionOverlay != null) {
+    print("consume? YES ${intent}");
+    return true;
+    // }
+    // print("consume? NO ${intent}");
+    // return false;
+  }
+}
+
+class MentionSelectAction extends MentionAction<MentionSelectIntent> {
+  MentionSelectAction(super.mo);
+
+  @override
+  void invoke(covariant MentionSelectIntent intent) {
+    print("ICI");
+    mo._selectHighlight();
+  }
+}
+
+class MentionDirectionalFocusAction
+    extends MentionAction<MentionDirectionalFocusIntent> {
+  MentionDirectionalFocusAction(super.mo);
+
+  @override
+  void invoke(covariant MentionDirectionalFocusIntent intent) {
+    print("invoke dec");
+    if (intent.direction == TraversalDirection.up) {
+      mo._updateHighlight(-1);
     }
-    print("consume? NO");
-    return false;
+    if (intent.direction == TraversalDirection.down) {
+      mo._updateHighlight(1);
+    }
   }
 }
 
@@ -176,6 +194,13 @@ class _FleatherMentionState extends State<FleatherMention> {
     //_highlightedOptionIndex.value = _options.isEmpty ? 0 : newIndex % _options.length;
   }
 
+  void _selectHighlight() {
+    _mentionOverlay?.doSelect();
+    //_highlightedOptionIndex.value += newIndex;
+
+    //_highlightedOptionIndex.value = _options.isEmpty ? 0 : newIndex % _options.length;
+  }
+
   void _updateOverlayForScroll() => _mentionOverlay?.updateForScroll();
 
   void _updateOrDisposeOverlayIfNeeded() {
@@ -206,7 +231,6 @@ class _FleatherMentionState extends State<FleatherMention> {
     final controller = widget.controller;
     final mentionStartIndex = controller.selection.end - _lastQuery!.length - 1;
     final mentionedTextLength = _lastQuery!.length + 1;
-    print("ICI");
     controller.replaceText(
       mentionStartIndex,
       mentionedTextLength,
@@ -233,12 +257,15 @@ class _FleatherMentionState extends State<FleatherMention> {
                   const MentionDirectionalFocusIntent(TraversalDirection.down),
               LogicalKeySet(LogicalKeyboardKey.arrowUp):
                   const MentionDirectionalFocusIntent(TraversalDirection.up),
+              LogicalKeySet(LogicalKeyboardKey.enter):
+                  const MentionSelectIntent(),
             },
             child: Actions(
                 actions: <Type, Action<Intent>>{
                   MentionDirectionalFocusIntent:
                       MentionDirectionalFocusAction(this),
-                      // DismissIntent
+                  MentionSelectIntent: MentionSelectAction(this),
+                  // DismissIntent
                 },
                 child: //Focus(autofocus: true, child: Text('count: '))
                     Focus(autofocus: true, child: widget.child))),

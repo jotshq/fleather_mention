@@ -59,18 +59,7 @@ class _MyHomePageState extends State<MyHomePage> {
   final editorKey = GlobalKey<EditorState>();
   final options = MentionOptions(
     mentionTriggers: ['#', '@'],
-    builder: (context, trigger, query, onTap) {
-      final List<String> data;
-      if (trigger == '#') {
-        data = ['Android', 'iOS', 'Windows', 'macOs', 'Web', 'Linux'];
-      } else {
-        data = ['Hibato', 'Madina', 'Quentin', 'Cedric', 'Emilia', 'Cathy'];
-      }
-      final suggestions = data
-          .where((e) => e.toLowerCase().contains(query.toLowerCase()))
-          .map((e) => MentionData(value: e, trigger: trigger))
-          .toList();
-
+    builder: (context, trigger, query, suggestions, onTap) {
       final sel = AutocompleteHighlightedOption.of(context) %
           (suggestions.length > 0 ? suggestions.length : 1);
       int i = 0;
@@ -115,11 +104,18 @@ class _MyHomePageState extends State<MyHomePage> {
           .map((e) => MentionData(value: e, trigger: trigger))
           .toList();
     },
-    itemBuilder: (context, data, query, selected, onTap) => ListTile(
-      onTap: onTap,
-      title: Text(data.value),
-      selected: selected,
-    ),
+    itemBuilder: (context, data, query, selected, onTap) {
+      if (data.selectable) {
+        return ListTile(
+          onTap: onTap,
+          title: Text(data.value),
+          selected: selected,
+        );
+      } else {
+        return Container(
+            color: Colors.amberAccent, child: Text(data.value.toUpperCase()));
+      }
+    },
   );
 
   @override

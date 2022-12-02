@@ -22,6 +22,7 @@ class MentionOverlay {
   OverlayEntry? overlayEntry;
   int? selected;
   final ValueNotifier<int> highlightedOptionIndex;
+  Iterable<MentionData>? currentSuggestions;
 
   MentionOverlay({
     required this.highlightedOptionIndex,
@@ -43,6 +44,7 @@ class MentionOverlay {
               future: Future.value(suggestions),
               builder: (context, snapshot) {
                 final data = snapshot.data;
+                currentSuggestions = data;
                 if (data == null) {
                   return const SizedBox();
                 }
@@ -63,6 +65,15 @@ class MentionOverlay {
             ));
     Overlay.of(context, rootOverlay: true, debugRequiredFor: debugRequiredFor)
         ?.insert(overlayEntry!);
+  }
+
+  void doSelect() {
+    final c = currentSuggestions;
+    // print("IC");
+    if (c == null) return;
+    final m = c.elementAt(highlightedOptionIndex.value);
+    // print("M: ${m}");
+    suggestionSelected?.call(m);
   }
 
   void updateForScroll() => overlayEntry?.markNeedsBuild();
@@ -128,27 +139,13 @@ class _MentionSuggestionList extends StatelessWidget {
 
     double? positionFromLeft = endpoints[0].point.dx + editingRegion.left;
     double? positionFromRight;
-    print("Pos left1: ${positionFromLeft}");
     positionFromLeft = min(positionFromLeft, screenWidth - 32 - listMaxWidth);
-    print("Pos left2: ${positionFromLeft} ${screenWidth - 42 - listMaxWidth}");
     if (positionFromLeft < 16) positionFromLeft = 16;
-    print("Pos left3: ${positionFromLeft}");
 
     positionFromRight = (screenWidth - 16) - positionFromLeft - listMaxWidth;
-    print("Pos right: ${positionFromRight}");
     if (positionFromRight < 16) {
       positionFromRight = 16;
-      // if (positionFromLeft > 16) {
-      //   positionFromLeft
-      // }
     }
-    // print(
-    //     "POS LL ${positionFromLeft} ${positionFromRight} ${screenWidth - 16}");
-
-    // if (positionFromLeft + listMaxWidth > screenWidth - 16) {
-    //   print("POS LOL ${positionFromLeft + listMaxWidth} ${screenWidth - 16}");
-    //   positionFromRight = 16;
-    // }
 
     return Positioned(
       top: positionFromTop,
@@ -164,7 +161,7 @@ class _MentionSuggestionList extends StatelessWidget {
   }
 
   Widget _buildOverlayWidget(BuildContext context) {
-    return builder(context, trigger, query, suggestionSelected!);
+    return builder(context, trigger, query, suggestions, suggestionSelected!);
   }
 
   Widget _defaultBuilder(BuildContext context, String trigger, String query) {
