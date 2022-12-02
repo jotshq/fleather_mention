@@ -14,6 +14,7 @@ dependencies:
   fleather: ^1.2.1
   fleather_mention:
     path: ../
+  flutter_portal: ^1.1.2
 
 dev_dependencies:
   flutter_test:
