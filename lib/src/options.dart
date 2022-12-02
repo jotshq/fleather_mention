@@ -5,8 +5,8 @@ import 'package:flutter/widgets.dart';
 typedef MentionSuggestionsBuilder = FutureOr<Iterable<MentionData>> Function(
     String trigger, String query);
 
-typedef MentionSuggestionItemBuilder = Widget Function(
-    BuildContext context, MentionData data, String query);
+typedef MentionSuggestionItemBuilder = Widget Function(BuildContext context,
+    MentionData data, String query, bool selected, void Function() onTap);
 
 class MentionOptions {
   final Iterable<String> mentionTriggers;

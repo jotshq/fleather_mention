@@ -4,6 +4,37 @@ import 'package:flutter/material.dart';
 
 void main() => runApp(const MyApp());
 
+class DemoList extends StatelessWidget {
+  const DemoList({super.key});
+
+  @override
+  Widget build(BuildContext context) {
+    return Scaffold(
+      body: Column(
+        children: [
+          Expanded(
+              child: ListView(
+            children: [
+              ListTile(
+                title: Text("A"),
+                onTap: () => print("A"),
+              ),
+              ListTile(
+                title: Text("B"),
+                onTap: () => print("A"),
+              ),
+              ListTile(
+                title: Text("C"),
+                onTap: () => print("A"),
+              ),
+            ],
+          ))
+        ],
+      ),
+    );
+  }
+}
+
 class MyApp extends StatelessWidget {
   const MyApp({Key? key}) : super(key: key);
 
@@ -33,33 +64,40 @@ class _MyHomePageState extends State<MyHomePage> {
       if (trigger == '#') {
         data = ['Android', 'iOS', 'Windows', 'macOs', 'Web', 'Linux'];
       } else {
-        data = ['John', 'Michael', 'Dave', 'Susan', 'Emilia', 'Cathy'];
+        data = ['Hibato', 'Madina', 'Quentin', 'Cedric', 'Emilia', 'Cathy'];
       }
       return data
           .where((e) => e.toLowerCase().contains(query.toLowerCase()))
           .map((e) => MentionData(value: e, trigger: trigger))
           .toList();
     },
-    itemBuilder: (context, data, query) => ListTile(title: Text(data.value)),
+    itemBuilder: (context, data, query, selected, onTap) => ListTile(
+      onTap: onTap,
+      title: Text(data.value),
+      selected: selected,
+    ),
   );
 
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-        appBar: AppBar(title: Text('Fleather mention demo')),
-        body: Column(
-          children: <Widget>[
-            FleatherToolbar.basic(controller: controller),
-            Divider(height: 1),
-            Expanded(
-              child: FleatherMention.withEditor(
-                options: options,
-                child: _buildEditor(),
-              ),
+      appBar: AppBar(
+        title: Text('Fleather mention demo'),
+        actions: [TextButton(onPressed: () {}, child: Text("TT"))],
+      ),
+      body: Column(
+        children: <Widget>[
+          FleatherToolbar.basic(controller: controller),
+          Divider(height: 1),
+          Expanded(
+            child: FleatherMention.withEditor(
+              options: options,
+              child: _buildEditor(),
             ),
-          ],
-        ),
-      );
+          ),
+        ],
+      ),
+    );
   }
 
   FleatherEditor _buildEditor() => FleatherEditor(

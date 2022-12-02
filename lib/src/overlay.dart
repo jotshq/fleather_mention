@@ -17,8 +17,11 @@ class MentionOverlay {
   final Function(MentionData)? suggestionSelected;
   final MentionSuggestionItemBuilder itemBuilder;
   OverlayEntry? overlayEntry;
+  int? selected;
+  final ValueNotifier<int> highlightedOptionIndex;
 
   MentionOverlay({
+    required this.highlightedOptionIndex,
     required this.textEditingValue,
     required this.context,
     required this.renderObject,
@@ -39,7 +42,7 @@ class MentionOverlay {
                 if (data == null) {
                   return const SizedBox();
                 }
-                return _MentionSuggestionList(
+                final suggestions = _MentionSuggestionList(
                   renderObject: renderObject,
                   suggestions: data,
                   textEditingValue: textEditingValue,
@@ -48,6 +51,9 @@ class MentionOverlay {
                   query: query,
                   trigger: trigger,
                 );
+                return AutocompleteHighlightedOption(
+                    highlightIndexNotifier: highlightedOptionIndex,
+                    child: suggestions);
               },
             ));
     Overlay.of(context, rootOverlay: true, debugRequiredFor: debugRequiredFor)
@@ -125,15 +131,22 @@ class _MentionSuggestionList extends StatelessWidget {
   }
 
   Widget _buildOverlayWidget(BuildContext context) {
+    final sel = AutocompleteHighlightedOption.of(context) % suggestions.length;
+    print("SEL: ${sel}");
+    int i = 0;
+    final children = <Widget>[];
+    for (var s in suggestions) {
+      children.add(_buildListItem(context, s, query, sel == i));
+      i++;
+    }
+
     final c = Card(
       child: SingleChildScrollView(
         child: IntrinsicWidth(
           child: Column(
             mainAxisSize: MainAxisSize.min,
             crossAxisAlignment: CrossAxisAlignment.stretch,
-            children: suggestions
-                .map((e) => _buildListItem(context, e, query))
-                .toList(),
+            children: children,
           ),
         ),
       ),
@@ -141,9 +154,8 @@ class _MentionSuggestionList extends StatelessWidget {
     return c;
   }
 
-  Widget _buildListItem(BuildContext context, MentionData data, String text) =>
-      InkWell(
-        onTap: () => suggestionSelected?.call(data),
-        child: itemBuilder(context, data, query),
-      );
+  Widget _buildListItem(
+          BuildContext context, MentionData data, String text, bool selected) =>
+      itemBuilder(
+          context, data, query, selected, () => suggestionSelected?.call(data));
 }

@@ -6,31 +6,26 @@ import 'options.dart';
 import 'overlay.dart';
 import 'utils.dart';
 
-class DirectionalFocusIntent2 extends Intent {
-  /// Creates an intent used to move the focus in the given [direction].
-  const DirectionalFocusIntent2(this.direction, {this.ignoreTextFields = true})
-      : assert(ignoreTextFields != null);
-
-  /// The direction in which to look for the next focusable node when the
-  /// associated [DirectionalFocusAction] is invoked.
+class MentionDirectionalFocusIntent extends Intent {
+  const MentionDirectionalFocusIntent(this.direction);
   final TraversalDirection direction;
-
-  /// If true, then directional focus actions that occur within a text field
-  /// will not happen when the focus node which received the key is a text
-  /// field.
-  ///
-  /// Defaults to true.
-  final bool ignoreTextFields;
 }
 
-class DecrementAction extends Action<DirectionalFocusIntent2> {
+class MentionDirectionalFocusAction
+    extends Action<MentionDirectionalFocusIntent> {
   final _FleatherMentionState mo;
 
-  DecrementAction(this.mo);
+  MentionDirectionalFocusAction(this.mo);
 
   @override
-  void invoke(covariant DirectionalFocusIntent2 intent) {
+  void invoke(covariant MentionDirectionalFocusIntent intent) {
     print("invoke dec");
+    if (intent.direction == TraversalDirection.up) {
+      mo._updateHighlight(-1);
+    }
+    if (intent.direction == TraversalDirection.down) {
+      mo._updateHighlight(1);
+    }
     // if (mo._mentionOverlay) {
     //   return;
     // }
@@ -55,7 +50,7 @@ class DecrementAction extends Action<DirectionalFocusIntent2> {
   }
 
   @override
-  bool consumesKey(DirectionalFocusIntent2 intent) {
+  bool consumesKey(MentionDirectionalFocusIntent intent) {
     if (mo._mentionOverlay != null) {
       print("consume? YES");
       return true;
@@ -119,6 +114,7 @@ class _FleatherMentionState extends State<FleatherMention> {
   MentionOverlay? _mentionOverlay;
   bool _hasFocus = false;
   String? _lastQuery, _lastTrigger;
+  final ValueNotifier<int> _highlightedOptionIndex = ValueNotifier<int>(0);
 
   FleatherController get _controller => widget.controller;
 
@@ -188,6 +184,11 @@ class _FleatherMentionState extends State<FleatherMention> {
     _updateOrDisposeOverlayIfNeeded();
   }
 
+  void _updateHighlight(int newIndex) {
+    _highlightedOptionIndex.value += newIndex;
+    //_highlightedOptionIndex.value = _options.isEmpty ? 0 : newIndex % _options.length;
+  }
+
   void _updateOverlayForScroll() => _mentionOverlay?.updateForScroll();
 
   void _updateOrDisposeOverlayIfNeeded() {
@@ -197,6 +198,7 @@ class _FleatherMentionState extends State<FleatherMention> {
     } else {
       _mentionOverlay?.dispose();
       _mentionOverlay = MentionOverlay(
+        highlightedOptionIndex: _highlightedOptionIndex,
         query: _lastQuery!,
         trigger: _lastTrigger!,
         context: context,
@@ -225,6 +227,10 @@ class _FleatherMentionState extends State<FleatherMention> {
     );
   }
 
+  // we need to capture the up/down arrow for selection
+  // only enabling them when we are active.
+  // we cannot use the normal focus actions as the focus should be on the
+  // textfield (to let the user continue editing text)
   @override
   Widget build(BuildContext context) =>
       NotificationListener<ScrollNotification>(
@@ -236,15 +242,14 @@ class _FleatherMentionState extends State<FleatherMention> {
             key: GlobalKey(),
             shortcuts: <ShortcutActivator, Intent>{
               LogicalKeySet(LogicalKeyboardKey.arrowDown):
-                  const DirectionalFocusIntent2(TraversalDirection.down),
+                  const MentionDirectionalFocusIntent(TraversalDirection.down),
               LogicalKeySet(LogicalKeyboardKey.arrowUp):
-                  const DirectionalFocusIntent2(TraversalDirection.up),
-              // LogicalKeySet(LogicalKeyboardKey.arrowUp): const IncrementIntent(),
-              // LogicalKeySet(LogicalKeyboardKey.arrowDown): const DecrementIntent(),
+                  const MentionDirectionalFocusIntent(TraversalDirection.up),
             },
             child: Actions(
                 actions: <Type, Action<Intent>>{
-                  DirectionalFocusIntent2: DecrementAction(this),
+                  MentionDirectionalFocusIntent:
+                      MentionDirectionalFocusAction(this),
                 },
                 child: //Focus(autofocus: true, child: Text('count: '))
                     Focus(autofocus: true, child: widget.child))),
