@@ -3,6 +3,7 @@ import 'dart:math';
 
 import 'package:fleather/fleather.dart';
 import 'package:fleather_mention/fleather_mention.dart';
+import 'package:fleather_mention/src/positioned_from_rect.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 
@@ -115,49 +116,13 @@ class _MentionSuggestionList extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final endpoints =
-        renderObject.getEndpointsForSelection(textEditingValue.selection);
-    final editingRegion = Rect.fromPoints(
-      renderObject.localToGlobal(Offset.zero),
-      renderObject.localToGlobal(renderObject.size.bottomRight(Offset.zero)),
-    );
-    final baseLineHeight =
-        renderObject.preferredLineHeight(textEditingValue.selection.base);
-    //final listMaxWidth = editingRegion.width / 2;
-    final mediaQueryData = MediaQuery.of(context);
-    final screenHeight = mediaQueryData.size.height;
-    final screenWidth = mediaQueryData.size.width;
-
-    double? positionFromTop = endpoints[0].point.dy + editingRegion.top;
-    double? positionFromBottom;
-
-    if (positionFromTop + listMaxHeight >
-        screenHeight - mediaQueryData.viewInsets.bottom) {
-      positionFromTop = null;
-      positionFromBottom = screenHeight - editingRegion.bottom + baseLineHeight;
-    }
-
-    double? positionFromLeft = endpoints[0].point.dx + editingRegion.left;
-    double? positionFromRight;
-    positionFromLeft = min(positionFromLeft, screenWidth - 32 - listMaxWidth);
-    if (positionFromLeft < 16) positionFromLeft = 16;
-
-    positionFromRight = (screenWidth - 16) - positionFromLeft - listMaxWidth;
-    if (positionFromRight < 16) {
-      positionFromRight = 16;
-    }
-
-    return Positioned(
-      top: positionFromTop,
-      bottom: positionFromBottom,
-      left: positionFromLeft,
-      right: positionFromRight,
-      child: ConstrainedBox(
-        constraints: const BoxConstraints(
-            maxWidth: listMaxWidth, maxHeight: listMaxHeight),
-        child: _buildOverlayWidget(context),
-      ),
-    );
+    return positionedFromTextPos(
+        context,
+        renderObject,
+        TextPosition(offset: textEditingValue.selection.start),
+        listMaxHeight,
+        listMaxWidth,
+        _buildOverlayWidget(context));
   }
 
   Widget _buildOverlayWidget(BuildContext context) {
