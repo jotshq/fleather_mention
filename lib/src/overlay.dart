@@ -13,12 +13,11 @@ class MentionOverlay {
   final BuildContext context;
   final RenderEditor renderObject;
   final Widget debugRequiredFor;
-  final FutureOr<Iterable<MentionData>> suggestions;
+  final FutureOr<List<MentionData>> suggestions;
   final String query, trigger;
   final TextEditingValue textEditingValue;
   final Function(MentionData)? suggestionSelected;
-  final MentionSuggestionItemBuilder itemBuilder;
-  final MentionBuilder builder;
+  final MentionOptions options;
 
   OverlayEntry? overlayEntry;
   int? selected;
@@ -32,8 +31,7 @@ class MentionOverlay {
     required this.renderObject,
     required this.debugRequiredFor,
     required this.suggestions,
-    required this.itemBuilder,
-    required this.builder,
+    required this.options,
     required this.query,
     required this.trigger,
     this.suggestionSelected,
@@ -42,7 +40,7 @@ class MentionOverlay {
   void show() {
     final parentContext = context;
     overlayEntry = OverlayEntry(
-        builder: (context) => FutureBuilder<Iterable<MentionData>>(
+        builder: (context) => FutureBuilder<List<MentionData>>(
               future: Future.value(suggestions),
               builder: (context, snapshot) {
                 final data = snapshot.data;
@@ -50,20 +48,13 @@ class MentionOverlay {
                 if (data == null) {
                   return const SizedBox();
                 }
-                // ScrollNotificationObserver.of(parentContext)?.addListener(
-                //   (notification) {
-                //     print("notif: ${notification}");
-                //   },
-                // );
-                // ScrollNotificationObserver.of(myCtx)?.
                 final suggestions = _MentionSuggestionList(
                   parentContext: parentContext,
                   renderObject: renderObject,
                   suggestions: data,
                   textEditingValue: textEditingValue,
                   suggestionSelected: suggestionSelected,
-                  itemBuilder: itemBuilder,
-                  builder: builder,
+                  options: options,
                   query: query,
                   trigger: trigger,
                 );
@@ -117,6 +108,7 @@ class _ScrollUpdaterState extends State<ScrollUpdater> {
   ScrollNotificationObserverState? sno;
 
   void _onScroll(notification) {
+    // print("on Scroll");
     WidgetsBinding.instance.addPostFrameCallback((Duration d) {
       setState(() {
         notification = notification;
@@ -149,12 +141,11 @@ class _ScrollUpdaterState extends State<ScrollUpdater> {
 
 class _MentionSuggestionList extends StatelessWidget {
   final RenderEditor renderObject;
-  final Iterable<MentionData> suggestions;
+  final List<MentionData> suggestions;
   final String query, trigger;
   final TextEditingValue textEditingValue;
   final Function(MentionData)? suggestionSelected;
-  final MentionSuggestionItemBuilder itemBuilder;
-  final MentionBuilder builder;
+  final MentionOptions options;
   final BuildContext parentContext;
 
   const _MentionSuggestionList({
@@ -163,8 +154,7 @@ class _MentionSuggestionList extends StatelessWidget {
     required this.renderObject,
     required this.suggestions,
     required this.textEditingValue,
-    required this.itemBuilder,
-    required this.builder,
+    required this.options,
     required this.query,
     required this.trigger,
     this.suggestionSelected,
@@ -172,49 +162,49 @@ class _MentionSuggestionList extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final builder = positionedFromTextPos(
+    Widget builder(context) => positionedFromTextPos(
         context,
         renderObject,
         TextPosition(offset: textEditingValue.selection.start),
         listMaxHeight,
         listMaxWidth,
         _buildOverlayWidget(context));
-    return builder;
-    return ScrollUpdater(
-        parentContext: parentContext, builder: (context) => builder);
+    // return builder;
+    return ScrollUpdater(parentContext: parentContext, builder: builder);
   }
 
   Widget _buildOverlayWidget(BuildContext context) {
-    return builder(context, trigger, query, suggestions, suggestionSelected!);
+    return options.overlayBuilder(
+        context, trigger, query, suggestions, suggestionSelected!);
   }
 
-  Widget _defaultBuilder(BuildContext context, String trigger, String query) {
-    final children = <Widget>[];
-    final sel = AutocompleteHighlightedOption.of(context) % suggestions.length;
-    print("SEL: ${sel}");
-    int i = 0;
+  // Widget _defaultBuilder(BuildContext context, String trigger, String query) {
+  //   final children = <Widget>[];
+  //   final sel = AutocompleteHighlightedOption.of(context) % suggestions.length;
+  //   print("SEL: ${sel}");
+  //   int i = 0;
 
-    for (var s in suggestions) {
-      children.add(_buildListItem(context, s, query, sel == i));
-      i++;
-    }
+  //   for (var s in suggestions) {
+  //     children.add(_buildListItem(context, s, query, sel == i));
+  //     i++;
+  //   }
 
-    final c = Card(
-      child: SingleChildScrollView(
-        child: IntrinsicWidth(
-          child: Column(
-            mainAxisSize: MainAxisSize.min,
-            crossAxisAlignment: CrossAxisAlignment.stretch,
-            children: children,
-          ),
-        ),
-      ),
-    );
-    return c;
-  }
+  //   final c = Card(
+  //     child: SingleChildScrollView(
+  //       child: IntrinsicWidth(
+  //         child: Column(
+  //           mainAxisSize: MainAxisSize.min,
+  //           crossAxisAlignment: CrossAxisAlignment.stretch,
+  //           children: children,
+  //         ),
+  //       ),
+  //     ),
+  //   );
+  //   return c;
+  // }
 
-  Widget _buildListItem(
-          BuildContext context, MentionData data, String text, bool selected) =>
-      itemBuilder(
-          context, data, query, selected, () => suggestionSelected?.call(data));
+  // Widget _buildListItem(
+  //         BuildContext context, MentionData data, String text, bool selected) =>
+  //     itemBuilder(
+  //         context, data, query, selected, () => suggestionSelected?.call(data));
 }

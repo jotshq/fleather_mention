@@ -83,10 +83,10 @@ class FleatherMention extends StatefulWidget {
 
   /// Constructs a FleatherMention with a FleatherEditor as it's child.
   /// The given FleatherEditor should have a FocusNode and editor key.
-  factory FleatherMention.withEditor(
-      {required MentionOptions options,
-      required FleatherEditor child,
-      ScrollController? scrollController}) {
+  factory FleatherMention.withEditor({
+    required MentionOptions options,
+    required FleatherEditor child,
+  }) {
     assert(child.focusNode != null);
     assert(child.editorKey != null);
     return FleatherMention._(
@@ -100,10 +100,10 @@ class FleatherMention extends StatefulWidget {
 
   /// Constructs a FleatherMention with a FleatherField as it's child.
   /// The given FleatherField should have a FocusNode and editor key.
-  factory FleatherMention.withField(
-      {required MentionOptions options,
-      required FleatherField child,
-      ScrollController? scrollController}) {
+  factory FleatherMention.withField({
+    required MentionOptions options,
+    required FleatherField child,
+  }) {
     assert(child.focusNode != null);
     assert(child.editorKey != null);
     return FleatherMention._(
@@ -220,8 +220,7 @@ class _FleatherMentionState extends State<FleatherMention> {
         trigger: _lastTrigger!,
         context: context,
         debugRequiredFor: widget.editorKey.currentWidget!,
-        itemBuilder: _options.itemBuilder,
-        builder: _options.builder,
+        options: _options,
         suggestionSelected: _handleMentionSuggestionSelected,
         suggestions:
             _options.suggestionsBuilder.call(_lastTrigger!, _lastQuery!),
@@ -236,12 +235,26 @@ class _FleatherMentionState extends State<FleatherMention> {
     final controller = widget.controller;
     final mentionStartIndex = controller.selection.end - _lastQuery!.length - 1;
     final mentionedTextLength = _lastQuery!.length + 1;
-    controller.replaceText(
-      mentionStartIndex,
-      mentionedTextLength,
-      buildEmbeddableObject(data),
-      selection: TextSelection.collapsed(offset: mentionStartIndex + 1),
-    );
+
+    final object = _options.mentionBuilder(
+        controller, mentionStartIndex, mentionedTextLength, data);
+    if (object != null) {
+      var len = 1;
+      if (object.data is String) {
+        final s = object.data as String;
+        len = s.length;
+      }
+      controller.replaceText(
+        mentionStartIndex,
+        mentionedTextLength,
+        object.data,
+        selection: TextSelection.collapsed(offset: mentionStartIndex + len),
+      );
+      for (var attr in object.attrs) {
+        final t = object.data as String;
+        controller.formatText(mentionStartIndex, t.length, attr);
+      }
+    }
   }
 
   // we need to capture the up/down arrow for selection
@@ -278,5 +291,15 @@ class _FleatherMentionState extends State<FleatherMention> {
           return false;
         },
         child: c);
+  }
+}
+
+class MentionScrollListener extends StatelessWidget {
+  final Widget child;
+  const MentionScrollListener({required this.child, super.key});
+
+  @override
+  Widget build(BuildContext context) {
+    return ScrollNotificationObserver(child: child);
   }
 }

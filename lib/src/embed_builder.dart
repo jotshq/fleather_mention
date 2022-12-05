@@ -60,3 +60,22 @@ Widget? mentionEmbedBuilder(BuildContext context, EmbedNode node,
   }
   return null;
 }
+
+class EmbedMentionData {
+  // text or an embed object
+  Object data;
+  List<ParchmentAttribute> attrs;
+
+  EmbedMentionData.text(String text, String link)
+      : this._(data: text, attrs: [ParchmentAttribute.link.fromString(link)]);
+
+  EmbedMentionData.link(String text, String link)
+      : data = text,
+        attrs = [ParchmentAttribute.link.fromString(link)];
+
+  EmbedMentionData.embed(Object embed)
+      : data = embed,
+        attrs = [];
+
+  EmbedMentionData._({required this.data, this.attrs = const []});
+}
