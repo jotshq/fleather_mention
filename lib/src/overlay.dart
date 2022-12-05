@@ -40,6 +40,7 @@ class MentionOverlay {
   });
 
   void show() {
+    final parentContext = context;
     overlayEntry = OverlayEntry(
         builder: (context) => FutureBuilder<Iterable<MentionData>>(
               future: Future.value(suggestions),
@@ -49,7 +50,14 @@ class MentionOverlay {
                 if (data == null) {
                   return const SizedBox();
                 }
+                // ScrollNotificationObserver.of(parentContext)?.addListener(
+                //   (notification) {
+                //     print("notif: ${notification}");
+                //   },
+                // );
+                // ScrollNotificationObserver.of(myCtx)?.
                 final suggestions = _MentionSuggestionList(
+                  parentContext: parentContext,
                   renderObject: renderObject,
                   suggestions: data,
                   textEditingValue: textEditingValue,
@@ -93,6 +101,52 @@ class MentionOverlay {
 const double listMaxHeight = 240;
 const double listMaxWidth = 400;
 
+class ScrollUpdater extends StatefulWidget {
+  final Widget Function(BuildContext) builder;
+  final BuildContext parentContext;
+
+  const ScrollUpdater(
+      {required this.builder, required this.parentContext, super.key});
+
+  @override
+  State<ScrollUpdater> createState() => _ScrollUpdaterState();
+}
+
+class _ScrollUpdaterState extends State<ScrollUpdater> {
+  ScrollNotification? notification;
+  ScrollNotificationObserverState? sno;
+
+  void _onScroll(notification) {
+    WidgetsBinding.instance.addPostFrameCallback((Duration d) {
+      setState(() {
+        notification = notification;
+      });
+    });
+    // print("notif2: ${notification}");
+  }
+
+  @override
+  void didChangeDependencies() {
+    if (sno != null) {
+      sno!.removeListener(_onScroll);
+    }
+    sno = ScrollNotificationObserver.of(widget.parentContext);
+    sno?.addListener(_onScroll);
+    super.didChangeDependencies();
+  }
+
+  @override
+  void dispose() {
+    sno?.removeListener(_onScroll);
+    super.dispose();
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return widget.builder(context);
+  }
+}
+
 class _MentionSuggestionList extends StatelessWidget {
   final RenderEditor renderObject;
   final Iterable<MentionData> suggestions;
@@ -101,9 +155,11 @@ class _MentionSuggestionList extends StatelessWidget {
   final Function(MentionData)? suggestionSelected;
   final MentionSuggestionItemBuilder itemBuilder;
   final MentionBuilder builder;
+  final BuildContext parentContext;
 
   const _MentionSuggestionList({
     Key? key,
+    required this.parentContext,
     required this.renderObject,
     required this.suggestions,
     required this.textEditingValue,
@@ -116,13 +172,16 @@ class _MentionSuggestionList extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return positionedFromTextPos(
+    final builder = positionedFromTextPos(
         context,
         renderObject,
         TextPosition(offset: textEditingValue.selection.start),
         listMaxHeight,
         listMaxWidth,
         _buildOverlayWidget(context));
+    return builder;
+    return ScrollUpdater(
+        parentContext: parentContext, builder: (context) => builder);
   }
 
   Widget _buildOverlayWidget(BuildContext context) {

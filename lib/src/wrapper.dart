@@ -84,7 +84,9 @@ class FleatherMention extends StatefulWidget {
   /// Constructs a FleatherMention with a FleatherEditor as it's child.
   /// The given FleatherEditor should have a FocusNode and editor key.
   factory FleatherMention.withEditor(
-      {required MentionOptions options, required FleatherEditor child}) {
+      {required MentionOptions options,
+      required FleatherEditor child,
+      ScrollController? scrollController}) {
     assert(child.focusNode != null);
     assert(child.editorKey != null);
     return FleatherMention._(
@@ -99,7 +101,9 @@ class FleatherMention extends StatefulWidget {
   /// Constructs a FleatherMention with a FleatherField as it's child.
   /// The given FleatherField should have a FocusNode and editor key.
   factory FleatherMention.withField(
-      {required MentionOptions options, required FleatherField child}) {
+      {required MentionOptions options,
+      required FleatherField child,
+      ScrollController? scrollController}) {
     assert(child.focusNode != null);
     assert(child.editorKey != null);
     return FleatherMention._(
@@ -138,6 +142,7 @@ class _FleatherMentionState extends State<FleatherMention> {
   void dispose() {
     _controller.removeListener(_onDocumentUpdated);
     _focusNode.removeListener(_onFocusChanged);
+
     super.dispose();
   }
 
@@ -244,30 +249,34 @@ class _FleatherMentionState extends State<FleatherMention> {
   // we cannot use the normal focus actions as the focus should be on the
   // textfield (to let the user continue editing text)
   @override
-  Widget build(BuildContext context) =>
-      NotificationListener<ScrollNotification>(
+  Widget build(BuildContext context) {
+    final c = Shortcuts(
+        key: GlobalKey(),
+        shortcuts: <ShortcutActivator, Intent>{
+          LogicalKeySet(LogicalKeyboardKey.arrowDown):
+              const MentionDirectionalFocusIntent(TraversalDirection.down),
+          LogicalKeySet(LogicalKeyboardKey.arrowUp):
+              const MentionDirectionalFocusIntent(TraversalDirection.up),
+          LogicalKeySet(LogicalKeyboardKey.enter): const MentionSelectIntent(),
+        },
+        child: Actions(
+            actions: <Type, Action<Intent>>{
+              MentionDirectionalFocusIntent:
+                  MentionDirectionalFocusAction(this),
+              MentionSelectIntent: MentionSelectAction(this),
+              // DismissIntent
+            },
+            child: //Focus(autofocus: true, child: Text('count: '))
+                Focus(autofocus: true, child: widget.child)));
+
+    // if we have a scroll controller we listen to it instead of using NotificationListener
+    // if (widget.scrollController != null) return c;
+    return c;
+    return NotificationListener<ScrollNotification>(
         onNotification: (_) {
           _updateOverlayForScroll();
           return false;
         },
-        child: Shortcuts(
-            key: GlobalKey(),
-            shortcuts: <ShortcutActivator, Intent>{
-              LogicalKeySet(LogicalKeyboardKey.arrowDown):
-                  const MentionDirectionalFocusIntent(TraversalDirection.down),
-              LogicalKeySet(LogicalKeyboardKey.arrowUp):
-                  const MentionDirectionalFocusIntent(TraversalDirection.up),
-              LogicalKeySet(LogicalKeyboardKey.enter):
-                  const MentionSelectIntent(),
-            },
-            child: Actions(
-                actions: <Type, Action<Intent>>{
-                  MentionDirectionalFocusIntent:
-                      MentionDirectionalFocusAction(this),
-                  MentionSelectIntent: MentionSelectAction(this),
-                  // DismissIntent
-                },
-                child: //Focus(autofocus: true, child: Text('count: '))
-                    Focus(autofocus: true, child: widget.child))),
-      );
+        child: c);
+  }
 }

@@ -2,13 +2,20 @@ import 'dart:math';
 
 import 'package:fleather/fleather.dart';
 import 'package:flutter/material.dart';
+import 'package:flutter/rendering.dart';
+
+// nice info: https://github.com/rvamsikrishna/inview_notifier_list/blob/master/lib/src/inview_state.dart
 
 // Same as renderEditor.getLocalRectForCaret but it returns global rect
 // that does take the editor padding into account
-Rect _getGlobalRectForCaret(RenderEditor renderEditor, TextPosition position) {
+Rect? _getGlobalRectForCaret(RenderEditor renderEditor, TextPosition position) {
   final targetChild = renderEditor.childAtPosition(position);
   final localPosition = targetChild.globalToLocalPosition(position);
 
+  if (targetChild.debugNeedsLayout) {
+    print("null rect");
+    return null;
+  }
   final childLocalRect = targetChild.getLocalRectForCaret(localPosition);
   return Rect.fromPoints(targetChild.localToGlobal(childLocalRect.topLeft),
       targetChild.localToGlobal(childLocalRect.bottomRight));
@@ -21,7 +28,9 @@ Widget positionedFromTextPos(
     double childHeight,
     double childWidth,
     Widget child) {
+  // print("posFrom");
   final gLineRect = _getGlobalRectForCaret(renderEditor, position);
+  if (gLineRect == null) return const SizedBox();
 
   final mediaQueryData = MediaQuery.of(context);
   final screenHeight = mediaQueryData.size.height;
@@ -46,24 +55,36 @@ Widget positionedFromTextPos(
     positionFromRight = 16;
   }
 
-  try {
-    final pp = renderEditor.parent as RenderBox;
-    final p = pp.parent as RenderBox;
-    final editingAreaTop = p.localToGlobal(Offset.zero);
-    // hide the overlay when the line is not displayed
-    if (positionFromTop != null) {
-      if (positionFromTop < editingAreaTop.dy) {
-        return const SizedBox();
-      }
+  final RenderAbstractViewport viewport =
+      RenderAbstractViewport.of(renderEditor)!;
+
+  final vp = viewport as RenderViewport;
+
+  // viewport
+  // final double vpHeight = notification.metrics.viewportDimension;
+  // final targetChild = renderEditor.childAtPosition(position);
+  // final RevealedOffset vpOffset = viewport.getOffsetToReveal(targetChild, 0.0);
+  // print("vpOff: ${vpOffset} ${vp.size} ${vp.localToGlobal(Offset.zero)}");
+
+  final editingArea = Rect.fromPoints(vp.localToGlobal(Offset.zero),
+      vp.localToGlobal(Offset(vp.size.width, vp.size.height)));
+
+  if (positionFromTop != null) {
+    if (positionFromTop < editingArea.top) {
+      return const SizedBox();
     }
-    if (positionFromBottom != null) {
-      if (positionFromBottom < 0) return const SizedBox();
-      if (positionFromBottom > screenHeight - editingAreaTop.dy) {
-        return const SizedBox();
-      }
+    if (positionFromTop > editingArea.bottom) {
+      return const SizedBox();
     }
-  } catch (err) {
-    print("This should not happened: cannot find correct parent renderbox");
+  }
+  if (positionFromBottom != null) {
+    if (positionFromBottom <
+        screenHeight - editingArea.bottom /*+ gLineRect.height*/) {
+      return const SizedBox();
+    }
+    if (positionFromBottom > screenHeight - editingArea.top) {
+      return const SizedBox();
+    }
   }
 
   return Positioned(
@@ -73,7 +94,7 @@ Widget positionedFromTextPos(
     right: positionFromRight,
     child: ConstrainedBox(
       constraints: BoxConstraints(maxWidth: childWidth, maxHeight: childHeight),
-      child: ClipRRect(child: child),
+      child: child,
     ),
   );
 }
