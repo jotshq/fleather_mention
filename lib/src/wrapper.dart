@@ -71,6 +71,7 @@ class FleatherMention extends StatefulWidget {
   final FleatherController controller;
   final FocusNode focusNode;
   final GlobalKey<EditorState> editorKey;
+  final bool readOnly;
 
   const FleatherMention._({
     Key? key,
@@ -79,6 +80,7 @@ class FleatherMention extends StatefulWidget {
     required this.child,
     required this.focusNode,
     required this.editorKey,
+    required this.readOnly,
   }) : super(key: key);
 
   /// Constructs a FleatherMention with a FleatherEditor as it's child.
@@ -94,6 +96,7 @@ class FleatherMention extends StatefulWidget {
       focusNode: child.focusNode!,
       editorKey: child.editorKey!,
       options: options,
+      readOnly: child.readOnly,
       child: child,
     );
   }
@@ -111,6 +114,7 @@ class FleatherMention extends StatefulWidget {
       focusNode: child.focusNode!,
       editorKey: child.editorKey!,
       options: options,
+      readOnly: child.readOnly,
       child: child,
     );
   }
@@ -167,6 +171,7 @@ class _FleatherMentionState extends State<FleatherMention> {
   void _checkForMentionTriggers() {
     _lastTrigger = null;
     _lastQuery = null;
+    if (widget.readOnly) return;
 
     if (!_controller.selection.isCollapsed) return;
 
