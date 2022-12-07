@@ -12,7 +12,7 @@ Rect? _getGlobalRectForCaret(RenderEditor renderEditor, TextPosition position) {
   final targetChild = renderEditor.childAtPosition(position);
   final localPosition = targetChild.globalToLocalPosition(position);
 
-  if (targetChild.debugNeedsLayout) {
+  if (targetChild.debugNeedsLayout || !targetChild.attached) {
     print("null rect");
     return null;
   }
