@@ -15,7 +15,7 @@ class MentionOverlay {
   final Widget debugRequiredFor;
   final FutureOr<List<MentionData>> suggestions;
   final String query, trigger;
-  final TextEditingValue textEditingValue;
+  final int position;
   final Function(MentionData)? suggestionSelected;
   final MentionOptions options;
 
@@ -26,7 +26,7 @@ class MentionOverlay {
 
   MentionOverlay({
     required this.highlightedOptionIndex,
-    required this.textEditingValue,
+    required this.position,
     required this.context,
     required this.renderObject,
     required this.debugRequiredFor,
@@ -52,7 +52,7 @@ class MentionOverlay {
                   parentContext: parentContext,
                   renderObject: renderObject,
                   suggestions: data,
-                  textEditingValue: textEditingValue,
+                  position: position,
                   suggestionSelected: suggestionSelected,
                   options: options,
                   query: query,
@@ -143,9 +143,10 @@ class _MentionSuggestionList extends StatelessWidget {
   final RenderEditor renderObject;
   final List<MentionData> suggestions;
   final String query, trigger;
-  final TextEditingValue textEditingValue;
+  // final TextEditingValue textEditingValue;
   final Function(MentionData)? suggestionSelected;
   final MentionOptions options;
+  final int position;
   final BuildContext parentContext;
 
   const _MentionSuggestionList({
@@ -153,7 +154,7 @@ class _MentionSuggestionList extends StatelessWidget {
     required this.parentContext,
     required this.renderObject,
     required this.suggestions,
-    required this.textEditingValue,
+    required this.position,
     required this.options,
     required this.query,
     required this.trigger,
@@ -165,7 +166,7 @@ class _MentionSuggestionList extends StatelessWidget {
     Widget builder(context) => positionedFromTextPos(
         context,
         renderObject,
-        TextPosition(offset: textEditingValue.selection.start),
+        TextPosition(offset: position),
         listMaxHeight,
         listMaxWidth,
         _buildOverlayWidget(context));

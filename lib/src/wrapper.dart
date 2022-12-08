@@ -127,6 +127,7 @@ class _FleatherMentionState extends State<FleatherMention> {
   MentionOverlay? _mentionOverlay;
   bool _hasFocus = false;
   String? _lastQuery, _lastTrigger;
+  int? _indexOfLastMentionTrigger;
   final ValueNotifier<int> _highlightedOptionIndex = ValueNotifier<int>(0);
 
   FleatherController get _controller => widget.controller;
@@ -187,7 +188,7 @@ class _FleatherMentionState extends State<FleatherMention> {
         .contains(RegExp(r'\n'))) {
       return;
     }
-
+    _indexOfLastMentionTrigger = indexOfLastMentionTrigger + 1;
     _lastQuery = plainText.substring(
         indexOfLastMentionTrigger + 1, _controller.selection.end);
     _lastTrigger = plainText.substring(
@@ -229,7 +230,7 @@ class _FleatherMentionState extends State<FleatherMention> {
         suggestionSelected: _handleMentionSuggestionSelected,
         suggestions:
             _options.suggestionsBuilder.call(_lastTrigger!, _lastQuery!),
-        textEditingValue: widget.editorKey.currentState!.textEditingValue,
+        position: _indexOfLastMentionTrigger!,
         renderObject: widget.editorKey.currentState!.renderEditor,
       );
       _mentionOverlay!.show();
