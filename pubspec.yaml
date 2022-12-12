@@ -18,3 +18,9 @@ dev_dependencies:
   flutter_test:
     sdk: flutter
   flutter_lints: ^2.0.0
+
+dependency_overrides:
+  fleather:
+    path: ../fleather/packages/fleather
+  parchment:
+    path: ../fleather/packages/parchment

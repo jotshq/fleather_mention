@@ -1,10 +1,13 @@
 import 'package:fleather/fleather.dart';
 import 'package:flutter/material.dart';
-import 'package:flutter/widgets.dart';
 import 'package:flutter_portal/flutter_portal.dart';
 
-import 'const.dart';
 import 'options.dart';
+
+const mentionEmbedKey = 'mention';
+
+EmbeddableObject buildEmbeddableObject(MentionData data) =>
+    EmbeddableObject(mentionEmbedKey, inline: true, data: data.toJson());
 
 class MentionWidget extends StatefulWidget {
   final MentionData data;
@@ -59,23 +62,4 @@ Widget? mentionEmbedBuilder(BuildContext context, EmbedNode node,
     } catch (_) {}
   }
   return null;
-}
-
-class EmbedMentionData {
-  // text or an embed object
-  Object data;
-  List<ParchmentAttribute> attrs;
-
-  EmbedMentionData.text(String text, String link)
-      : this._(data: text, attrs: [ParchmentAttribute.link.fromString(link)]);
-
-  EmbedMentionData.link(String text, String link)
-      : data = text,
-        attrs = [ParchmentAttribute.link.fromString(link)];
-
-  EmbedMentionData.embed(Object embed)
-      : data = embed,
-        attrs = [];
-
-  EmbedMentionData._({required this.data, this.attrs = const []});
 }

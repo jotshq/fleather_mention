@@ -8,7 +8,7 @@ import 'package:flutter/rendering.dart';
 
 // Same as renderEditor.getLocalRectForCaret but it returns global rect
 // that does take the editor padding into account
-Rect? _getGlobalRectForCaret(RenderEditor renderEditor, TextPosition position) {
+Rect? getGlobalRectForCaret(RenderEditor renderEditor, TextPosition position) {
   final targetChild = renderEditor.childAtPosition(position);
   final localPosition = targetChild.globalToLocalPosition(position);
 
@@ -21,6 +21,23 @@ Rect? _getGlobalRectForCaret(RenderEditor renderEditor, TextPosition position) {
       targetChild.localToGlobal(childLocalRect.bottomRight));
 }
 
+Widget positionedFromTextPos3(BuildContext context, RenderEditor renderEditor,
+    TextPosition position, LayerLink link, Widget child) {
+  final targetChild = renderEditor.childAtPosition(position);
+
+  final offset = targetChild.getOffsetForCaret(position);
+  // final offset = Offset();
+  return Positioned(
+    top: 0,
+    left: 0,
+    child: CompositedTransformFollower(
+      link: link,
+      child: child,
+      offset: offset,
+    ),
+  );
+}
+
 Widget positionedFromTextPos(
     BuildContext context,
     RenderEditor renderEditor,
@@ -29,23 +46,40 @@ Widget positionedFromTextPos(
     double childWidth,
     Widget child) {
   // print("posFrom");
-  final gLineRect = _getGlobalRectForCaret(renderEditor, position);
-  if (gLineRect == null) return const SizedBox();
+  final lineRect = getGlobalRectForCaret(renderEditor, position);
+  if (lineRect == null) return const SizedBox();
+
+  final RenderAbstractViewport? viewport =
+      RenderAbstractViewport.of(renderEditor);
+
+  if (viewport == null) return const SizedBox();
+
+  final vp = viewport as RenderViewport;
+
+  final editingArea = Rect.fromPoints(vp.localToGlobal(Offset.zero),
+      vp.localToGlobal(Offset(vp.size.width, vp.size.height)));
+  return positionedFromTextPos2(
+      context, lineRect, editingArea, childHeight, childWidth, child);
+}
+
+Widget positionedFromTextPos2(BuildContext context, Rect lineRect,
+    Rect editingArea, double childHeight, double childWidth, Widget child) {
+  // print("posFrom");
 
   final mediaQueryData = MediaQuery.of(context);
   final screenHeight = mediaQueryData.size.height;
   final screenWidth = mediaQueryData.size.width;
 
-  double? positionFromTop = gLineRect.bottom;
+  double? positionFromTop = lineRect.bottom;
   double? positionFromBottom;
 
   if (positionFromTop + childHeight >
       screenHeight - mediaQueryData.viewInsets.bottom) {
     positionFromTop = null;
-    positionFromBottom = screenHeight - gLineRect.top;
+    positionFromBottom = screenHeight - lineRect.top;
   }
 
-  double? positionFromLeft = gLineRect.left;
+  double? positionFromLeft = lineRect.left;
   double? positionFromRight;
   positionFromLeft = min(positionFromLeft, screenWidth - 32 - childWidth);
   if (positionFromLeft < 16) positionFromLeft = 16;
@@ -54,20 +88,6 @@ Widget positionedFromTextPos(
   if (positionFromRight < 16) {
     positionFromRight = 16;
   }
-
-  final RenderAbstractViewport viewport =
-      RenderAbstractViewport.of(renderEditor)!;
-
-  final vp = viewport as RenderViewport;
-
-  // viewport
-  // final double vpHeight = notification.metrics.viewportDimension;
-  // final targetChild = renderEditor.childAtPosition(position);
-  // final RevealedOffset vpOffset = viewport.getOffsetToReveal(targetChild, 0.0);
-  // print("vpOff: ${vpOffset} ${vp.size} ${vp.localToGlobal(Offset.zero)}");
-
-  final editingArea = Rect.fromPoints(vp.localToGlobal(Offset.zero),
-      vp.localToGlobal(Offset(vp.size.width, vp.size.height)));
 
   if (positionFromTop != null) {
     if (positionFromTop < editingArea.top) {

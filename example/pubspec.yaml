@@ -22,3 +22,9 @@ dev_dependencies:
 
 flutter:
   uses-material-design: true
+
+dependency_overrides:
+  fleather:
+    path: ../../fleather/packages/fleather
+  parchment:
+    path: ../../fleather/packages/parchment

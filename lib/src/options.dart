@@ -4,6 +4,25 @@ import 'package:fleather/fleather.dart';
 import 'package:fleather_mention/fleather_mention.dart';
 import 'package:flutter/widgets.dart';
 
+class EmbedMentionData {
+  // text or an embed object
+  Object data;
+  List<ParchmentAttribute> attrs;
+
+  EmbedMentionData.text(String text, String link)
+      : this._(data: text, attrs: [ParchmentAttribute.link.fromString(link)]);
+
+  EmbedMentionData.link(String text, String link)
+      : data = text,
+        attrs = [ParchmentAttribute.link.fromString(link)];
+
+  EmbedMentionData.embed(Object embed)
+      : data = embed,
+        attrs = [];
+
+  EmbedMentionData._({required this.data, this.attrs = const []});
+}
+
 typedef MentionSuggestionsBuilder = FutureOr<List<MentionData>> Function(
     String trigger, String query);
 
@@ -15,6 +34,7 @@ typedef MentionOverlayBuilder = Widget Function(
     String trigger,
     String query,
     List<MentionData> suggestions,
+    int suggestionIndex,
     void Function(MentionData data) onTap);
 
 typedef EmbedMentionBuilder = EmbedMentionData? Function(
@@ -25,6 +45,7 @@ typedef EmbedMentionBuilder = EmbedMentionData? Function(
 
 class MentionOptions {
   final List<String> mentionTriggers;
+
   final MentionSuggestionsBuilder suggestionsBuilder;
   // final MentionSuggestionItemBuilder itemBuilder;
   final MentionOverlayBuilder overlayBuilder;

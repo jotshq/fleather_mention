@@ -1,69 +1,14 @@
+import 'dart:async';
+
 import 'package:fleather/fleather.dart';
+import 'package:fleather_mention/src/controller.dart';
+import 'package:fleather_mention/src/delta_utils.dart';
+import 'package:fleather_mention/src/shortcuts.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter/widgets.dart';
-
+import 'package:quill_delta/quill_delta.dart';
 import 'options.dart';
 import 'overlay.dart';
-import 'utils.dart';
-
-class MentionDirectionalFocusIntent extends Intent {
-  const MentionDirectionalFocusIntent(this.direction);
-  final TraversalDirection direction;
-}
-
-class MentionSelectIntent extends Intent {
-  const MentionSelectIntent();
-}
-
-abstract class MentionAction<T extends Intent> extends Action<T> {
-  final _FleatherMentionState mo;
-
-  MentionAction(this.mo);
-
-  @override
-  bool get isActionEnabled {
-    if (mo._mentionOverlay != null) {
-      return true;
-    }
-    return false;
-  }
-
-  @override
-  bool consumesKey(T intent) {
-    // if (mo._mentionOverlay != null) {
-    print("consume? YES ${intent}");
-    return true;
-    // }
-    // print("consume? NO ${intent}");
-    // return false;
-  }
-}
-
-class MentionSelectAction extends MentionAction<MentionSelectIntent> {
-  MentionSelectAction(super.mo);
-
-  @override
-  void invoke(covariant MentionSelectIntent intent) {
-    print("ICI");
-    mo._selectHighlight();
-  }
-}
-
-class MentionDirectionalFocusAction
-    extends MentionAction<MentionDirectionalFocusIntent> {
-  MentionDirectionalFocusAction(super.mo);
-
-  @override
-  void invoke(covariant MentionDirectionalFocusIntent intent) {
-    print("invoke dec");
-    if (intent.direction == TraversalDirection.up) {
-      mo._updateHighlight(-1);
-    }
-    if (intent.direction == TraversalDirection.down) {
-      mo._updateHighlight(1);
-    }
-  }
-}
 
 class FleatherMention extends StatefulWidget {
   final Widget child;
@@ -124,29 +69,34 @@ class FleatherMention extends StatefulWidget {
 }
 
 class _FleatherMentionState extends State<FleatherMention> {
-  MentionOverlay? _mentionOverlay;
   bool _hasFocus = false;
-  String? _lastQuery, _lastTrigger;
-  int? _indexOfLastMentionTrigger;
-  final ValueNotifier<int> _highlightedOptionIndex = ValueNotifier<int>(0);
+  OverlayEntry? _overlayEntry;
 
-  FleatherController get _controller => widget.controller;
+  late final MentionController _mentionController;
+  StreamSubscription<ParchmentChange>? _sub;
+  StreamSubscription<MentionState?>? _sub2;
 
-  FocusNode get _focusNode => widget.focusNode;
-
-  MentionOptions get _options => widget.options;
+  TextAnchor anchor = TextAnchor(const TextPosition(offset: 0));
 
   @override
   void initState() {
     super.initState();
-    _controller.addListener(_onDocumentUpdated);
-    _focusNode.addListener(_onFocusChanged);
+    _mentionController =
+        MentionController(_handleMentionSuggestionSelected, widget.options);
+    _sub2 = _mentionController.stream.stream.listen(_onMentionStateChange);
+
+    widget.controller.document.changes.listen(_onDocChanges);
+    widget.controller.addListener(_onChanges);
+    widget.focusNode.addListener(_onFocusChanged);
   }
 
   @override
-  void dispose() {
-    _controller.removeListener(_onDocumentUpdated);
-    _focusNode.removeListener(_onFocusChanged);
+  Future<void> dispose() async {
+    _hideOverlay();
+    widget.focusNode.removeListener(_onFocusChanged);
+    widget.controller.removeListener(_onChanges);
+    await _sub?.cancel();
+    await _sub2?.cancel();
 
     super.dispose();
   }
@@ -154,95 +104,92 @@ class _FleatherMentionState extends State<FleatherMention> {
   @override
   void didUpdateWidget(covariant FleatherMention oldWidget) {
     super.didUpdateWidget(oldWidget);
-    if (oldWidget.controller != _controller) {
-      oldWidget.controller.removeListener(_onDocumentUpdated);
-      _controller.addListener(_onDocumentUpdated);
+    if (oldWidget.controller != widget.controller) {
+      _sub?.cancel();
+      widget.controller.document.changes.listen(_onDocChanges);
+      oldWidget.controller.removeListener(_onChanges);
+      widget.controller.addListener(_onChanges);
     }
-    if (oldWidget.focusNode != _focusNode) {
+    if (oldWidget.focusNode != widget.focusNode) {
       oldWidget.focusNode.removeListener(_onFocusChanged);
-      _focusNode.addListener(_onFocusChanged);
+      widget.focusNode.addListener(_onFocusChanged);
     }
   }
 
-  void _onDocumentUpdated() {
-    _checkForMentionTriggers();
-    _updateOrDisposeOverlayIfNeeded();
+  void _checkForMentionTrigger(ParchmentChange change) {
+    if (widget.readOnly) return;
+    if (change.source == ChangeSource.remote) return;
+    final d = change.change;
+    if (d.length < 1) return;
+    final op = d.last;
+    if (op.isInsert && op.isPlain) {
+      final t = op.data as String;
+      if (widget.options.mentionTriggers.contains(t)) {
+        int len = 0;
+        for (var i = 0; i < d.length - 1; i++) {
+          final o = d[i];
+          if (o.isDelete) {
+            len -= o.length;
+          } else {
+            len += o.length;
+          }
+        }
+        anchor.pos = TextPosition(offset: len + t.length);
+        widget.controller.setAnchors([anchor]);
+        _mentionController.setTrigger(len, t);
+      }
+    }
   }
 
-  void _checkForMentionTriggers() {
-    _lastTrigger = null;
-    _lastQuery = null;
+  void _onDocChanges(ParchmentChange change) {
     if (widget.readOnly) return;
+    _checkForMentionTrigger(change);
+  }
 
-    if (!_controller.selection.isCollapsed) return;
-
-    final plainText = _controller.document.toPlainText();
-    final indexOfLastMentionTrigger = plainText
-        .substring(0, _controller.selection.end)
-        .lastIndexOf(RegExp(_options.mentionTriggers.join('|')));
-
-    if (indexOfLastMentionTrigger < 0) return;
-
-    if (plainText
-        .substring(indexOfLastMentionTrigger, _controller.selection.end)
-        .contains(RegExp(r'\n'))) {
+  void _onChanges() {
+    if (widget.readOnly) return;
+    final state = _mentionController.lastState;
+    if (state == null) return;
+    final sel = widget.controller.selection;
+    if (!sel.isCollapsed) {
+      _mentionController.dismiss();
       return;
     }
-    _indexOfLastMentionTrigger = indexOfLastMentionTrigger + 1;
-    _lastQuery = plainText.substring(
-        indexOfLastMentionTrigger + 1, _controller.selection.end);
-    _lastTrigger = plainText.substring(
-        indexOfLastMentionTrigger, indexOfLastMentionTrigger + 1);
-  }
+    if (sel.baseOffset < state.queryPos) {
+      _mentionController.dismiss();
+      return;
+    }
+    if (sel.baseOffset > state.queryPos + 20) {
+      _mentionController.dismiss();
+      return;
+    }
 
-  void _onFocusChanged() {
-    _hasFocus = _focusNode.hasFocus;
-    _updateOrDisposeOverlayIfNeeded();
-  }
-
-  void _updateHighlight(int newIndex) {
-    _highlightedOptionIndex.value += newIndex;
-    //_highlightedOptionIndex.value = _options.isEmpty ? 0 : newIndex % _options.length;
-  }
-
-  void _selectHighlight() {
-    _mentionOverlay?.doSelect();
-    //_highlightedOptionIndex.value += newIndex;
-
-    //_highlightedOptionIndex.value = _options.isEmpty ? 0 : newIndex % _options.length;
-  }
-
-  void _updateOverlayForScroll() => _mentionOverlay?.updateForScroll();
-
-  void _updateOrDisposeOverlayIfNeeded() {
-    if (!_hasFocus || _lastQuery == null || _lastTrigger == null) {
-      _mentionOverlay?.dispose();
-      _mentionOverlay = null;
-    } else {
-      _mentionOverlay?.dispose();
-      _mentionOverlay = MentionOverlay(
-        highlightedOptionIndex: _highlightedOptionIndex,
-        query: _lastQuery!,
-        trigger: _lastTrigger!,
-        context: context,
-        debugRequiredFor: widget.editorKey.currentWidget!,
-        options: _options,
-        suggestionSelected: _handleMentionSuggestionSelected,
-        suggestions:
-            _options.suggestionsBuilder.call(_lastTrigger!, _lastQuery!),
-        position: _indexOfLastMentionTrigger!,
-        renderObject: widget.editorKey.currentState!.renderEditor,
-      );
-      _mentionOverlay!.show();
+    final d = widget.controller.document.toDelta();
+    try {
+      final v = deltaStringForRange(d, state.queryPos, sel.baseOffset);
+      // print("V: ${v}");
+      if (v.contains("\n")) {
+        // this should not happen (new line are supposedly caught)
+        _mentionController.dismiss();
+        return;
+      }
+      _mentionController.setQuery(v);
+    } catch (err) {
+      print("ERR: ${err}");
+      // rethrow;
+      _mentionController.dismiss();
+      return;
     }
   }
 
   void _handleMentionSuggestionSelected(MentionData data) {
+    final state = _mentionController.lastState;
+    if (state == null) throw Exception("Invalid state");
     final controller = widget.controller;
-    final mentionStartIndex = controller.selection.end - _lastQuery!.length - 1;
-    final mentionedTextLength = _lastQuery!.length + 1;
+    final mentionStartIndex = state.triggerPos;
+    final mentionedTextLength = state.trigger.length + state.query.length;
 
-    final object = _options.mentionBuilder(
+    final object = widget.options.mentionBuilder(
         controller, mentionStartIndex, mentionedTextLength, data);
     if (object != null) {
       var len = 1;
@@ -263,6 +210,110 @@ class _FleatherMentionState extends State<FleatherMention> {
     }
   }
 
+  void _updateMentionQuery() {
+    // get the pos, compute diff with mention
+    // if this is plain text without changing blocks => query
+    // otherwize close the overlay
+  }
+
+  // void _checkForMentionTriggers() {
+  //   _lastTrigger = null;
+  //   _lastQuery = null;
+  //   if (widget.readOnly) return;
+
+  //   if (!_controller.selection.isCollapsed) return;
+
+  //   final plainText = _controller.document.toPlainText();
+  //   final indexOfLastMentionTrigger = plainText
+  //       .substring(0, _controller.selection.end)
+  //       .lastIndexOf(RegExp(_options.mentionTriggers.join('|')));
+
+  //   if (indexOfLastMentionTrigger < 0) return;
+
+  //   if (plainText
+  //       .substring(indexOfLastMentionTrigger, _controller.selection.end)
+  //       .contains(RegExp(r'\n'))) {
+  //     return;
+  //   }
+  //   _indexOfLastMentionTrigger = indexOfLastMentionTrigger + 1;
+  //   _lastQuery = plainText.substring(
+  //       indexOfLastMentionTrigger + 1, _controller.selection.end);
+  //   _lastTrigger = plainText.substring(
+  //       indexOfLastMentionTrigger, indexOfLastMentionTrigger + 1);
+  // }
+
+  void _onFocusChanged() {
+    _hasFocus = widget.focusNode.hasFocus;
+    _mentionController.toggle(_hasFocus);
+    // _updateOrDisposeOverlayIfNeeded();
+  }
+
+  void _onMentionStateChange(MentionState? state) {
+    if (state == null) {
+      _hideOverlay();
+      return;
+    }
+    _showOverlay();
+  }
+
+  void _hideOverlay() {
+    if (_overlayEntry == null) return;
+    _overlayEntry?.remove();
+    _overlayEntry?.dispose();
+    _overlayEntry = null;
+  }
+
+  void _showOverlay() {
+    if (_overlayEntry != null) return;
+
+    _overlayEntry = OverlayEntry(
+        builder: (context) => MentionOverlay(
+              mentionController: _mentionController,
+              options: widget.options,
+              layerLink: anchor.layerLink,
+              suggestionSelected: _mentionController.onValidate,
+            ));
+    Overlay.of(context, rootOverlay: true)?.insert(_overlayEntry!);
+  }
+
+  // void _updateOrDisposeOverlayIfNeeded() {
+  //   if (!_hasFocus || _lastQuery == null || _lastTrigger == null) {
+  //     if (_mentionOverlay == null) return;
+  //     _mentionOverlay?.dispose();
+  //     _mentionOverlay = null;
+  //     _controller.setAnchors([]);
+  //     print("ICI");
+  //   } else {
+  //     print("ICI2");
+  //     // if (anchor.pos.offset != _indexOfLastMentionTrigger) {
+  //     //   anchor.pos = TextPosition(offset: _indexOfLastMentionTrigger!);
+  //     //   print("UP");
+  //     // }
+  //     if (_mentionOverlay != null) return;
+  //     print("UP2");
+  //     // _mentionOverlay?.dispose();
+  //     _mentionOverlay = MentionOverlay(
+  //       highlightedOptionIndex: _highlightedOptionIndex,
+  //       query: _lastQuery!,
+  //       trigger: _lastTrigger!,
+  //       context: context,
+  //       debugRequiredFor: widget.editorKey.currentWidget!,
+  //       options: _options,
+  //       layerLink: anchor.layerLink,
+  //       suggestionSelected: _handleMentionSuggestionSelected,
+  //       suggestions:
+  //           _options.suggestionsBuilder.call(_lastTrigger!, _lastQuery!),
+  //       position: _indexOfLastMentionTrigger!,
+  //       renderObject: widget.editorKey.currentState!.renderEditor,
+  //     );
+  //     anchor.pos = TextPosition(offset: _indexOfLastMentionTrigger!);
+
+  //     _controller.setAnchors([anchor]);
+
+  //     _mentionOverlay!.show();
+  //   }
+  // }
+
   // we need to capture the up/down arrow for selection
   // only enabling them when we are active.
   // we cannot use the normal focus actions as the focus should be on the
@@ -276,36 +327,21 @@ class _FleatherMentionState extends State<FleatherMention> {
               const MentionDirectionalFocusIntent(TraversalDirection.down),
           LogicalKeySet(LogicalKeyboardKey.arrowUp):
               const MentionDirectionalFocusIntent(TraversalDirection.up),
-          LogicalKeySet(LogicalKeyboardKey.enter): const MentionSelectIntent(),
+          LogicalKeySet(LogicalKeyboardKey.enter): const SelectIntent(),
+          LogicalKeySet(LogicalKeyboardKey.escape): const DismissIntent(),
         },
         child: Actions(
             actions: <Type, Action<Intent>>{
               MentionDirectionalFocusIntent:
-                  MentionDirectionalFocusAction(this),
-              MentionSelectIntent: MentionSelectAction(this),
+                  MentionDirectionalFocusAction(_mentionController),
+              SelectIntent: MentionSelectAction(_mentionController),
+              DismissIntent: MentionDismissAction(_mentionController),
               // DismissIntent
             },
-            child: //Focus(autofocus: true, child: Text('count: '))
+            child:
+                //TODO is this needed?
                 Focus(autofocus: true, child: widget.child)));
 
-    // if we have a scroll controller we listen to it instead of using NotificationListener
-    // if (widget.scrollController != null) return c;
     return c;
-    return NotificationListener<ScrollNotification>(
-        onNotification: (_) {
-          _updateOverlayForScroll();
-          return false;
-        },
-        child: c);
-  }
-}
-
-class MentionScrollListener extends StatelessWidget {
-  final Widget child;
-  const MentionScrollListener({required this.child, super.key});
-
-  @override
-  Widget build(BuildContext context) {
-    return ScrollNotificationObserver(child: child);
   }
 }

@@ -53,9 +53,9 @@ packages:
   fleather:
     dependency: "direct main"
     description:
-      name: fleather
-      url: "https://pub.dartlang.org"
-    source: hosted
+      path: "../../fleather/packages/fleather"
+      relative: true
+    source: path
     version: "1.2.2"
   fleather_mention:
     dependency: "direct main"
@@ -110,11 +110,11 @@ packages:
     source: hosted
     version: "1.8.0"
   parchment:
-    dependency: transitive
+    dependency: "direct overridden"
     description:
-      name: parchment
-      url: "https://pub.dartlang.org"
-    source: hosted
+      path: "../../fleather/packages/parchment"
+      relative: true
+    source: path
     version: "1.2.1"
   path:
     dependency: transitive
