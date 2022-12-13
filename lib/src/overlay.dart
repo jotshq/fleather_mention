@@ -47,7 +47,7 @@ class MentionOverlay extends StatelessWidget {
   }
 
   Widget _buildOverlayWidget(BuildContext context, MentionState state) {
-    print(state.suggestions);
+    // print(state.suggestions);
     // return Container(width: 10, height: 10, color: Colors.amber);
     return options.overlayBuilder(context, state.trigger, state.query,
         state.suggestions, state.suggestionIndex, suggestionSelected);

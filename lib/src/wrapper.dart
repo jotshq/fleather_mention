@@ -271,13 +271,16 @@ class _FleatherMentionState extends State<FleatherMention> {
 
   void _showOverlay() {
     if (_overlayEntry != null) return;
-
+    final CapturedThemes themes =
+        InheritedTheme.capture(from: context, to: null);
     _overlayEntry = OverlayEntry(
-        builder: (context) => MentionOverlay(
-              mentionController: _mentionController,
-              options: widget.options,
-              layerLink: anchor.layerLink,
-              suggestionSelected: _mentionController.onValidate,
+        builder: (context) => themes.wrap(
+              MentionOverlay(
+                mentionController: _mentionController,
+                options: widget.options,
+                layerLink: anchor.layerLink,
+                suggestionSelected: _mentionController.onValidate,
+              ),
             ));
     Overlay.of(context, rootOverlay: true)?.insert(_overlayEntry!);
   }
