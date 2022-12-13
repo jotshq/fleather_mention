@@ -121,22 +121,28 @@ class _FleatherMentionState extends State<FleatherMention> {
     if (change.source == ChangeSource.remote) return;
     final d = change.change;
     if (d.length < 1) return;
-    final op = d.last;
-    if (op.isInsert && op.isPlain) {
-      final t = op.data as String;
-      if (widget.options.mentionTriggers.contains(t)) {
-        int len = 0;
-        for (var i = 0; i < d.length - 1; i++) {
-          final o = d[i];
-          if (o.isDelete) {
-            len -= o.length;
-          } else {
-            len += o.length;
+    // final op = d.last;
+    // if (op.isInsert && op.isPlain) {
+    // final t = op.data as String;
+    // print("t: ${t}");
+    // if (widget.options.mentionTriggers.contains(t)) {
+    int len = 0;
+    for (var i = 0; i < d.length; i++) {
+      final o = d[i];
+      if (o.isDelete) return;
+      if (o.isRetain) {
+        len += o.length;
+      }
+      if (o.isInsert) {
+        if (o.isPlain) {
+          final t = o.data as String;
+          if (widget.options.mentionTriggers.contains(t)) {
+            anchor.pos = TextPosition(offset: len + t.length);
+            widget.controller.setAnchors([anchor]);
+            _mentionController.setTrigger(len, t);
           }
         }
-        anchor.pos = TextPosition(offset: len + t.length);
-        widget.controller.setAnchors([anchor]);
-        _mentionController.setTrigger(len, t);
+        return;
       }
     }
   }
