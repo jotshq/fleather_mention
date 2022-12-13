@@ -27,7 +27,7 @@ class MentionOverlay extends StatelessWidget {
         builder: (context, snapshot) {
           final state = snapshot.data ?? mentionController.lastState;
           print("Data ${state}");
-          if (state == null) {
+          if (state == null || state.visible == false) {
             return const SizedBox();
           }
           return Positioned(
