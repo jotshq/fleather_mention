@@ -26,7 +26,6 @@ class MentionOverlay extends StatelessWidget {
         stream: mentionController.stream.stream,
         builder: (context, snapshot) {
           final state = snapshot.data ?? mentionController.lastState;
-          print("Data ${state}");
           if (state == null || state.visible == false) {
             return const SizedBox();
           }
@@ -40,7 +39,11 @@ class MentionOverlay extends StatelessWidget {
                 anchor: const Aligned(
                     follower: Alignment.topLeft,
                     target: Alignment.bottomLeft,
-                    shiftToWithinBound: AxisFlag(x: true, y: false)),
+                    shiftToWithinBound: AxisFlag(x: true),
+                    backup: Aligned(
+                        follower: Alignment.bottomLeft,
+                        target: Alignment.topLeft,
+                        shiftToWithinBound: AxisFlag(x: true))),
                 child: _buildOverlayWidget(context, state),
               ));
         });
