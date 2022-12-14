@@ -91,12 +91,12 @@ class _FleatherMentionState extends State<FleatherMention> {
   }
 
   @override
-  Future<void> dispose() async {
+  void dispose() {
     _hideOverlay();
     widget.focusNode.removeListener(_onFocusChanged);
     widget.controller.removeListener(_onChanges);
-    await _sub?.cancel();
-    await _sub2?.cancel();
+    _sub?.cancel();
+    _sub2?.cancel();
 
     super.dispose();
   }
