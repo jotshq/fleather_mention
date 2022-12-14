@@ -29,10 +29,12 @@ class MentionOverlay extends StatelessWidget {
           if (state == null || state.visible == false) {
             return const SizedBox();
           }
+
           return Positioned(
               top: 0,
               left: 0,
               child: EnhancedCompositedTransformFollower(
+                //TODO. this is incorrect.
                 targetSize: const Size(0, 24),
                 showWhenUnlinked: false,
                 link: layerLink,
@@ -44,45 +46,14 @@ class MentionOverlay extends StatelessWidget {
                         follower: Alignment.bottomLeft,
                         target: Alignment.topLeft,
                         shiftToWithinBound: AxisFlag(x: true))),
-                child: _buildOverlayWidget(context, state),
+                child: options.overlayBuilder(
+                    context,
+                    state.trigger,
+                    state.query,
+                    state.suggestions,
+                    state.suggestionIndex,
+                    suggestionSelected),
               ));
         });
   }
-
-  Widget _buildOverlayWidget(BuildContext context, MentionState state) {
-    // print(state.suggestions);
-    // return Container(width: 10, height: 10, color: Colors.amber);
-    return options.overlayBuilder(context, state.trigger, state.query,
-        state.suggestions, state.suggestionIndex, suggestionSelected);
-  }
-
-  // Widget _defaultBuilder(BuildContext context, String trigger, String query) {
-  //   final children = <Widget>[];
-  //   final sel = AutocompleteHighlightedOption.of(context) % suggestions.length;
-  //   print("SEL: ${sel}");
-  //   int i = 0;
-
-  //   for (var s in suggestions) {
-  //     children.add(_buildListItem(context, s, query, sel == i));
-  //     i++;
-  //   }
-
-  //   final c = Card(
-  //     child: SingleChildScrollView(
-  //       child: IntrinsicWidth(
-  //         child: Column(
-  //           mainAxisSize: MainAxisSize.min,
-  //           crossAxisAlignment: CrossAxisAlignment.stretch,
-  //           children: children,
-  //         ),
-  //       ),
-  //     ),
-  //   );
-  //   return c;
-  // }
-
-  // Widget _buildListItem(
-  //         BuildContext context, MentionData data, String text, bool selected) =>
-  //     itemBuilder(
-  //         context, data, query, selected, () => suggestionSelected?.call(data));
 }

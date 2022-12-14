@@ -1,7 +1,6 @@
 import 'dart:async';
 
 import 'package:fleather/fleather.dart';
-import 'package:fleather_mention/fleather_mention.dart';
 import 'package:flutter/widgets.dart';
 
 class EmbedMentionData {

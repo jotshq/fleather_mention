@@ -6,7 +6,6 @@ import 'package:fleather_mention/src/delta_utils.dart';
 import 'package:fleather_mention/src/shortcuts.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter/widgets.dart';
-import 'package:quill_delta/quill_delta.dart';
 import 'options.dart';
 import 'overlay.dart';
 
@@ -121,11 +120,6 @@ class _FleatherMentionState extends State<FleatherMention> {
     if (change.source == ChangeSource.remote) return;
     final d = change.change;
     if (d.length < 1) return;
-    // final op = d.last;
-    // if (op.isInsert && op.isPlain) {
-    // final t = op.data as String;
-    // print("t: ${t}");
-    // if (widget.options.mentionTriggers.contains(t)) {
     int len = 0;
     for (var i = 0; i < d.length; i++) {
       final o = d[i];
@@ -173,7 +167,6 @@ class _FleatherMentionState extends State<FleatherMention> {
     final d = widget.controller.document.toDelta();
     try {
       final v = deltaStringForRange(d, state.queryPos, sel.baseOffset);
-      // print("V: ${v}");
       if (v.contains("\n")) {
         // this should not happen (new line are supposedly caught)
         _mentionController.dismiss();
@@ -181,8 +174,7 @@ class _FleatherMentionState extends State<FleatherMention> {
       }
       _mentionController.setQuery(v);
     } catch (err) {
-      print("ERR: ${err}");
-      // rethrow;
+      // print("ERR: ${err}");
       _mentionController.dismiss();
       return;
     }
@@ -215,38 +207,6 @@ class _FleatherMentionState extends State<FleatherMention> {
       }
     }
   }
-
-  void _updateMentionQuery() {
-    // get the pos, compute diff with mention
-    // if this is plain text without changing blocks => query
-    // otherwize close the overlay
-  }
-
-  // void _checkForMentionTriggers() {
-  //   _lastTrigger = null;
-  //   _lastQuery = null;
-  //   if (widget.readOnly) return;
-
-  //   if (!_controller.selection.isCollapsed) return;
-
-  //   final plainText = _controller.document.toPlainText();
-  //   final indexOfLastMentionTrigger = plainText
-  //       .substring(0, _controller.selection.end)
-  //       .lastIndexOf(RegExp(_options.mentionTriggers.join('|')));
-
-  //   if (indexOfLastMentionTrigger < 0) return;
-
-  //   if (plainText
-  //       .substring(indexOfLastMentionTrigger, _controller.selection.end)
-  //       .contains(RegExp(r'\n'))) {
-  //     return;
-  //   }
-  //   _indexOfLastMentionTrigger = indexOfLastMentionTrigger + 1;
-  //   _lastQuery = plainText.substring(
-  //       indexOfLastMentionTrigger + 1, _controller.selection.end);
-  //   _lastTrigger = plainText.substring(
-  //       indexOfLastMentionTrigger, indexOfLastMentionTrigger + 1);
-  // }
 
   void _onFocusChanged() {
     _hasFocus = widget.focusNode.hasFocus;
@@ -285,51 +245,13 @@ class _FleatherMentionState extends State<FleatherMention> {
     Overlay.of(context, rootOverlay: true)?.insert(_overlayEntry!);
   }
 
-  // void _updateOrDisposeOverlayIfNeeded() {
-  //   if (!_hasFocus || _lastQuery == null || _lastTrigger == null) {
-  //     if (_mentionOverlay == null) return;
-  //     _mentionOverlay?.dispose();
-  //     _mentionOverlay = null;
-  //     _controller.setAnchors([]);
-  //     print("ICI");
-  //   } else {
-  //     print("ICI2");
-  //     // if (anchor.pos.offset != _indexOfLastMentionTrigger) {
-  //     //   anchor.pos = TextPosition(offset: _indexOfLastMentionTrigger!);
-  //     //   print("UP");
-  //     // }
-  //     if (_mentionOverlay != null) return;
-  //     print("UP2");
-  //     // _mentionOverlay?.dispose();
-  //     _mentionOverlay = MentionOverlay(
-  //       highlightedOptionIndex: _highlightedOptionIndex,
-  //       query: _lastQuery!,
-  //       trigger: _lastTrigger!,
-  //       context: context,
-  //       debugRequiredFor: widget.editorKey.currentWidget!,
-  //       options: _options,
-  //       layerLink: anchor.layerLink,
-  //       suggestionSelected: _handleMentionSuggestionSelected,
-  //       suggestions:
-  //           _options.suggestionsBuilder.call(_lastTrigger!, _lastQuery!),
-  //       position: _indexOfLastMentionTrigger!,
-  //       renderObject: widget.editorKey.currentState!.renderEditor,
-  //     );
-  //     anchor.pos = TextPosition(offset: _indexOfLastMentionTrigger!);
-
-  //     _controller.setAnchors([anchor]);
-
-  //     _mentionOverlay!.show();
-  //   }
-  // }
-
   // we need to capture the up/down arrow for selection
   // only enabling them when we are active.
   // we cannot use the normal focus actions as the focus should be on the
   // textfield (to let the user continue editing text)
   @override
   Widget build(BuildContext context) {
-    final c = Shortcuts(
+    return Shortcuts(
         key: GlobalKey(),
         shortcuts: <ShortcutActivator, Intent>{
           LogicalKeySet(LogicalKeyboardKey.arrowDown):
@@ -339,18 +261,12 @@ class _FleatherMentionState extends State<FleatherMention> {
           LogicalKeySet(LogicalKeyboardKey.enter): const SelectIntent(),
           LogicalKeySet(LogicalKeyboardKey.escape): const DismissIntent(),
         },
-        child: Actions(
-            actions: <Type, Action<Intent>>{
-              MentionDirectionalFocusIntent:
-                  MentionDirectionalFocusAction(_mentionController),
-              SelectIntent: MentionSelectAction(_mentionController),
-              DismissIntent: MentionDismissAction(_mentionController),
-              // DismissIntent
-            },
-            child:
-                //TODO is this needed?
-                Focus(autofocus: true, child: widget.child)));
-
-    return c;
+        child: Actions(actions: <Type, Action<Intent>>{
+          MentionDirectionalFocusIntent:
+              MentionDirectionalFocusAction(_mentionController),
+          SelectIntent: MentionSelectAction(_mentionController),
+          DismissIntent: MentionDismissAction(_mentionController),
+          // DismissIntent
+        }, child: widget.child));
   }
 }
