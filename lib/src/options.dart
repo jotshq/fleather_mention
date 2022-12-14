@@ -20,6 +20,10 @@ class EmbedMentionData {
       : data = embed,
         attrs = [];
 
+  EmbedMentionData.removeTrigger()
+      : data = '',
+        attrs = [];
+
   EmbedMentionData._({required this.data, this.attrs = const []});
 }
 
