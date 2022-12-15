@@ -84,7 +84,9 @@ class _FleatherMentionState extends State<FleatherMention> {
         MentionController(_handleMentionSuggestionSelected, widget.options);
     _sub2 = _mentionController.stream.stream.listen(_onMentionStateChange);
 
-    widget.controller.addAnchor(anchor);
+    WidgetsBinding.instance.addPostFrameCallback((timeStamp) {
+      widget.controller.addAnchor(anchor);
+    });
 
     widget.controller.document.changes.listen(_onDocChanges);
     widget.controller.addListener(_onChanges);
