@@ -24,3 +24,5 @@ dependency_overrides:
     path: ../fleather/packages/fleather
   parchment:
     path: ../fleather/packages/parchment
+  flutter_portal:
+    path: ../flutter_portal
