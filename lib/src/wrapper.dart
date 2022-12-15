@@ -84,6 +84,8 @@ class _FleatherMentionState extends State<FleatherMention> {
         MentionController(_handleMentionSuggestionSelected, widget.options);
     _sub2 = _mentionController.stream.stream.listen(_onMentionStateChange);
 
+    widget.controller.addAnchor(anchor);
+
     widget.controller.document.changes.listen(_onDocChanges);
     widget.controller.addListener(_onChanges);
     widget.focusNode.addListener(_onFocusChanged);
@@ -92,6 +94,7 @@ class _FleatherMentionState extends State<FleatherMention> {
   @override
   void dispose() {
     _hideOverlay();
+    widget.controller.removeAnchor(anchor);
     widget.focusNode.removeListener(_onFocusChanged);
     widget.controller.removeListener(_onChanges);
     _sub?.cancel();
@@ -105,6 +108,8 @@ class _FleatherMentionState extends State<FleatherMention> {
     super.didUpdateWidget(oldWidget);
     if (oldWidget.controller != widget.controller) {
       _sub?.cancel();
+      oldWidget.controller.removeAnchor(anchor);
+      widget.controller.addAnchor(anchor);
       widget.controller.document.changes.listen(_onDocChanges);
       oldWidget.controller.removeListener(_onChanges);
       widget.controller.addListener(_onChanges);
@@ -132,7 +137,6 @@ class _FleatherMentionState extends State<FleatherMention> {
           final t = o.data as String;
           if (widget.options.mentionTriggers.contains(t)) {
             anchor.pos = TextPosition(offset: len + t.length);
-            widget.controller.setAnchors([anchor]);
             _mentionController.setTrigger(len, t);
           }
         }
