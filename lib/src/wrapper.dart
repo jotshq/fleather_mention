@@ -235,8 +235,13 @@ class _FleatherMentionState extends State<FleatherMention> {
 
   void _showOverlay() {
     if (_overlayEntry != null) return;
-    final CapturedThemes themes =
-        InheritedTheme.capture(from: context, to: null);
+    final CapturedThemes themes = InheritedTheme.capture(
+      from: context,
+      to: Navigator.of(
+        context,
+        rootNavigator: true,
+      ).context,
+    );
     _overlayEntry = OverlayEntry(
         builder: (context) => themes.wrap(
               MentionOverlay(
