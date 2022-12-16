@@ -75,7 +75,7 @@ class _FleatherMentionState extends State<FleatherMention> {
   StreamSubscription<ParchmentChange>? _sub;
   StreamSubscription<MentionState?>? _sub2;
 
-  TextAnchor anchor = TextAnchor(const TextPosition(offset: 0));
+  TextAnchor anchor = TextAnchor.withLayerLink(const TextPosition(offset: 0));
 
   @override
   void initState() {
@@ -85,7 +85,7 @@ class _FleatherMentionState extends State<FleatherMention> {
     _sub2 = _mentionController.stream.stream.listen(_onMentionStateChange);
 
     WidgetsBinding.instance.addPostFrameCallback((timeStamp) {
-      widget.controller.addAnchor(anchor);
+      widget.controller.addTextAnchor(anchor);
     });
 
     widget.controller.document.changes.listen(_onDocChanges);
@@ -96,7 +96,7 @@ class _FleatherMentionState extends State<FleatherMention> {
   @override
   void dispose() {
     _hideOverlay();
-    widget.controller.removeAnchor(anchor);
+    widget.controller.removeTextAnchor(anchor);
     widget.focusNode.removeListener(_onFocusChanged);
     widget.controller.removeListener(_onChanges);
     _sub?.cancel();
@@ -110,8 +110,8 @@ class _FleatherMentionState extends State<FleatherMention> {
     super.didUpdateWidget(oldWidget);
     if (oldWidget.controller != widget.controller) {
       _sub?.cancel();
-      oldWidget.controller.removeAnchor(anchor);
-      widget.controller.addAnchor(anchor);
+      oldWidget.controller.removeTextAnchor(anchor);
+      widget.controller.addTextAnchor(anchor);
       widget.controller.document.changes.listen(_onDocChanges);
       oldWidget.controller.removeListener(_onChanges);
       widget.controller.addListener(_onChanges);
@@ -138,7 +138,7 @@ class _FleatherMentionState extends State<FleatherMention> {
         if (o.isPlain) {
           final t = o.data as String;
           if (widget.options.mentionTriggers.contains(t)) {
-            anchor.pos = TextPosition(offset: len + t.length);
+            anchor.selection = TextSelection.collapsed(offset: len + t.length);
             _mentionController.setTrigger(len, t);
           }
         }
@@ -249,7 +249,7 @@ class _FleatherMentionState extends State<FleatherMention> {
               MentionOverlay(
                 mentionController: _mentionController,
                 options: widget.options,
-                layerLink: anchor.layerLink,
+                layerLink: anchor.layerLink!,
                 suggestionSelected: _mentionController.onValidate,
               ),
             ));
